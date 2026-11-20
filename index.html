@@ -399,7 +399,7 @@ button.tag{border:0;min-height:44px;padding:0 16px;font-size:var(--t-sm);cursor:
 .x-btn svg{width:18px;height:18px}
 .x-btn:active{transform:translateY(-50%) scale(.92)}
 .blk{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.blk.dragging{z-index:6;opacity:.92;box-shadow:0 16px 30px -12px rgb(40 30 15 / .5),inset 0 0 0 2px var(--c);transition:none;cursor:grabbing}
+.blk.dragging{animation:none!important;z-index:6;opacity:.92;box-shadow:0 16px 30px -12px rgb(40 30 15 / .5),inset 0 0 0 2px var(--c);transition:none;cursor:grabbing}
 .list{grid-template-columns:minmax(0,1fr)}
 .share-row.sr2{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;column-gap:10px;row-gap:2px;align-items:center;padding:12px 0}
 .sr2 .nm{font-size:1.05rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -434,6 +434,11 @@ button.tag{border:0;min-height:44px;padding:0 16px;font-size:var(--t-sm);cursor:
 .owe-row{display:flex;align-items:center;gap:12px;min-height:56px}
 .owe-row .who{flex:1;min-width:0;display:grid}
 .owe-row small{color:var(--warn);font-weight:600;font-size:var(--t-xs)}
+#dragtip{position:fixed;z-index:60;pointer-events:none;background:#1f2a23;color:#fff;border-radius:14px;padding:8px 12px;font-size:var(--t-sm);display:grid;gap:2px;box-shadow:0 10px 24px -10px rgb(0 0 0 / .5);white-space:nowrap}
+#dragtip.bad{background:var(--warn)}
+#dragtip small{font-size:var(--t-xs);opacity:.9}
+.drop-ghost{position:absolute;left:2px;right:2px;border-radius:10px;border:2px dashed var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);pointer-events:none;z-index:4}
+.drop-ghost.bad{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent)}
 .foot{text-align:center;color:var(--ink-3);font-size:var(--t-xs);padding:var(--s7) 0 var(--s4)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -467,7 +472,7 @@ button.tag{border:0;min-height:44px;padding:0 16px;font-size:var(--t-sm);cursor:
 <script>
 (function(){
 'use strict';
-const VERSION='v2.4';
+const VERSION='v2.5';
 const STAMP='20/11/2026';
 const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const DS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -994,18 +999,32 @@ function bindDrag(v){
   const cal=$('.cal',v);if(!cal||UI.view==='free')return;
   const lo=+cal.dataset.lo,HP=+cal.dataset.hp;
   const start=(el,x,y,touch)=>{const r=el.getBoundingClientRect();DRAG={el,id:el.dataset.s,x0:x,y0:y,lx:x,ly:y,grab:y-r.top,drag:false,touch};
-    if(touch)DRAG.timer=setTimeout(()=>{if(DRAG&&DRAG.el===el){DRAG.drag=true;el.classList.add('dragging');if(navigator.vibrate)navigator.vibrate(8);}},300);};
+    if(touch)DRAG.timer=setTimeout(()=>{if(DRAG&&DRAG.el===el){DRAG.drag=true;el.classList.add('dragging');if(navigator.vibrate)navigator.vibrate(8);show(DRAG.lx,DRAG.ly);}},300);};
+  const wk=W();
+  const target=(x,y)=>{DRAG.el.style.visibility='hidden';const u=document.elementFromPoint(x,y);DRAG.el.style.visibility='';
+    const col=u&&u.closest&&u.closest('.cal-col');if(!col)return null;const cr=col.getBoundingClientRect();
+    let m=lo+Math.round((y-DRAG.grab-cr.top)/HP*60/15)*15;const sx=wk.sched.find(z=>z.id===DRAG.id);m=Math.max(0,Math.min(1440-sx.len,m));return {col,d:+col.dataset.d,m,len:sx.len,c:sx.c};};
+  const tip=()=>{let t=document.getElementById('dragtip');if(!t){t=document.createElement('div');t.id='dragtip';document.body.appendChild(t);}return t;};
+  const clearUi=()=>{const t=document.getElementById('dragtip');if(t)t.remove();cal.querySelectorAll('.drop-ghost').forEach(g=>g.remove());};
+  const show=(x,y)=>{const tg=target(x,y),t=tip();cal.querySelectorAll('.drop-ghost').forEach(g=>g.remove());
+    if(!tg){t.className='';t.textContent='Drop on a day';}
+    else{const sx=wk.sched.find(z=>z.id===DRAG.id);const hit=live(wk).find(p=>p!==sx&&conflict(asE(p),{c:tg.c,d:tg.d,s:tg.m,e:tg.m+tg.len}));
+      const dt=dayDate(UI.wk,tg.d);t.className=hit?'bad':'';
+      t.innerHTML='<b>'+DS[tg.d]+' '+dm(dt)+' · '+fmt(tg.m)+' to '+fmt(tg.m+tg.len)+'</b>'+(hit?'<small>Clashes with '+esc(client(hit.c).name)+'</small>':'');
+      const sm=DRAG.el.querySelector('small');if(sm)sm.textContent=fmt(tg.m)+' to '+fmt(tg.m+tg.len);
+      const g=document.createElement('div');g.className='drop-ghost'+(hit?' bad':'');g.style.top=(tg.m-lo)/60*HP+'px';g.style.height=tg.len/60*HP+'px';tg.col.appendChild(g);}
+    const w=t.offsetWidth||160;t.style.left=Math.max(8,Math.min(innerWidth-w-8,x-w/2))+'px';t.style.top=Math.max(8,y-DRAG.grab-58)+'px';};
   const move=(x,y)=>{if(!DRAG)return;const dx=x-DRAG.x0,dy=y-DRAG.y0;
     if(!DRAG.drag){if(Math.hypot(dx,dy)<7)return;if(DRAG.touch){clearTimeout(DRAG.timer);DRAG=null;return;}DRAG.drag=true;DRAG.el.classList.add('dragging');}
-    DRAG.lx=x;DRAG.ly=y;DRAG.el.style.transform='translate('+dx+'px,'+dy+'px)';};
-  const end=()=>{if(!DRAG)return;const D=DRAG;DRAG=null;clearTimeout(D.timer);if(!D.drag)return;
+    DRAG.lx=x;DRAG.ly=y;DRAG.el.style.transform='translate('+dx+'px,'+dy+'px)';show(x,y);};
+  const end=()=>{if(!DRAG)return;const D=DRAG;DRAG=null;clearTimeout(D.timer);clearUi();if(!D.drag)return;
     UI.noClick=true;setTimeout(()=>{UI.noClick=false;},400);
     D.el.style.visibility='hidden';const under=document.elementFromPoint(D.lx,D.ly);D.el.style.visibility='';
     D.el.classList.remove('dragging');D.el.style.transform='';
     const col=under&&under.closest&&under.closest('.cal-col');if(!col){renderWeek();return;}
     const cr=col.getBoundingClientRect(),top=D.ly-D.grab-cr.top;
     dropSession(D.id,+col.dataset.d,lo+Math.round(top/HP*60/15)*15);};
-  const cancel=()=>{if(!DRAG)return;clearTimeout(DRAG.timer);DRAG.el.classList.remove('dragging');DRAG.el.style.transform='';DRAG=null;};
+  const cancel=()=>{clearUi();if(!DRAG)return;clearTimeout(DRAG.timer);DRAG.el.classList.remove('dragging');DRAG.el.style.transform='';DRAG=null;};
   cal.querySelectorAll('.blk').forEach(el=>{
     el.addEventListener('touchstart',e=>{const t=e.touches[0];start(el,t.clientX,t.clientY,true);},{passive:true});
     el.addEventListener('touchmove',e=>{const t=e.touches[0];move(t.clientX,t.clientY);},{passive:true});
