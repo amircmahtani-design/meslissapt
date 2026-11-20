@@ -412,6 +412,28 @@ button.tag{border:0;min-height:44px;padding:0 16px;font-size:var(--t-sm);cursor:
 .intro-ol{margin:0;padding-left:22px;display:grid;gap:10px;color:var(--ink-2)}
 .intro-ol b{color:var(--ink)}
 .intro-ol ul{margin:8px 0;padding-left:18px;display:grid;gap:6px}
+.step{display:grid;gap:14px}
+.step-h{display:flex;align-items:flex-start;gap:12px}
+.step-h .grow{flex:1;min-width:0}
+.step-h h2{font-size:var(--t-1)}
+.step-h p{font-size:var(--t-sm);color:var(--ink-2);margin-top:2px}
+.step-n{flex:none;width:32px;height:32px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:.95rem;margin-top:1px}
+.step-h .tag{flex:none;margin:2px 0 0}
+.step .cal{box-shadow:none;border:0;padding:0;background:transparent;overflow:visible}
+@media (max-width:599px){.step .cal-head,.step .cal-body{grid-template-columns:38px repeat(var(--cols),minmax(0,1fr))}}
+.step .agenda .day{box-shadow:none;background:var(--surface-2)}
+.wa-big{background:#1f8a4c;color:#fff;box-shadow:0 10px 22px -12px rgb(31 138 76 / .8)}
+.wa-big svg{width:20px;height:20px}
+.back{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px 0 8px;border:0;background:transparent;font-weight:650;color:var(--accent);justify-self:start}
+.back svg{width:18px;height:18px}
+.mini{display:grid;gap:6px}
+.mini-row{display:grid;grid-template-columns:52px 12px auto minmax(0,1fr);align-items:center;gap:10px;min-height:40px;font-size:var(--t-sm)}
+.mini-row span.num{font-weight:700}
+.mini-row b{font-weight:700}
+.mini-row small{color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.owe-row{display:flex;align-items:center;gap:12px;min-height:56px}
+.owe-row .who{flex:1;min-width:0;display:grid}
+.owe-row small{color:var(--warn);font-weight:600;font-size:var(--t-xs)}
 .foot{text-align:center;color:var(--ink-3);font-size:var(--t-xs);padding:var(--s7) 0 var(--s4)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -424,15 +446,16 @@ button.tag{border:0;min-height:44px;padding:0 16px;font-size:var(--t-sm);cursor:
       <div class="meta"><span class="saved" id="saved">Saved</span><span class="ver" id="ver"></span></div>
     </div>
     <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" data-tab="today">Today</button>
       <button class="tab" role="tab" data-tab="week">Week</button>
-      <button class="tab" role="tab" data-tab="times">Times</button>
-      <button class="tab" role="tab" data-tab="clients">Clients</button>
       <button class="tab" role="tab" data-tab="pay">Payments</button>
+      <button class="tab" role="tab" data-tab="clients">Clients</button>
     </nav>
   </div>
 </header>
 <main class="wrap">
-  <section class="view" id="v-week"></section>
+  <section class="view" id="v-today"></section>
+  <section class="view" id="v-week" hidden></section>
   <section class="view" id="v-times" hidden></section>
   <section class="view" id="v-clients" hidden></section>
   <section class="view" id="v-pay" hidden></section>
@@ -444,7 +467,7 @@ button.tag{border:0;min-height:44px;padding:0 16px;font-size:var(--t-sm);cursor:
 <script>
 (function(){
 'use strict';
-const VERSION='v2.3';
+const VERSION='v2.4';
 const STAMP='20/11/2026';
 const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const DS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -527,7 +550,7 @@ let S=load();
   Object.keys(S.weeks).forEach(k=>{if(k>=now){const w=S.weeks[k];if(!w.avail.amir)w.avail.amir=amirU.slice();}});
   try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}
 })();
-const UI={view:(function(){try{return localStorage.getItem('ptweek.v1.view')||'cal';}catch(e){return 'cal';}})(),tab:'week',wk:keyOf(addDays(mondayOf(new Date()),new Date().getDay()%6===0?7:0)),sel:'t',fresh:false};
+const UI={view:(function(){try{return localStorage.getItem('ptweek.v1.view')||'cal';}catch(e){return 'cal';}})(),tab:'today',wk:keyOf(addDays(mondayOf(new Date()),new Date().getDay()%6===0?7:0)),sel:'t',fresh:false};
 
 let saveT,flashT;
 function save(){
@@ -728,9 +751,10 @@ async function copyText(t){
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>go(b.dataset.tab)));
 function go(t,sel){UI.tab=t;if(sel)UI.sel=sel;render();window.scrollTo({top:0});}
 function render(){
-  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===UI.tab)));
-  ['week','times','clients','pay'].forEach(t=>$('#v-'+t).hidden=t!==UI.tab);
-  if(UI.tab==='week')renderWeek();else if(UI.tab==='times')renderTimes();else if(UI.tab==='pay')renderPay();else renderClients();
+  const hl=UI.tab==='times'?'week':UI.tab;
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===hl)));
+  ['today','week','times','clients','pay'].forEach(t=>$('#v-'+t).hidden=t!==UI.tab);
+  if(UI.tab==='today')renderToday();else if(UI.tab==='week')renderWeek();else if(UI.tab==='times')renderTimes();else if(UI.tab==='pay')renderPay();else renderClients();
 }
 function weekBar(){
   return '<div class="weekbar"><button class="icon-btn" data-wk="-1" aria-label="Previous week">'+I.left+'</button><div><h1 class="num"><span class="wl-l">'+weekLabel(UI.wk)+'</span><span class="wl-s">'+weekShort(UI.wk)+'</span></h1><p class="sub">'+(UI.wk===keyOf(mondayOf(new Date()))?'This week':UI.wk===keyOf(addDays(mondayOf(new Date()),7))?'Next week':'Week of '+dm(fromKey(UI.wk))+'/'+fromKey(UI.wk).getFullYear())+'</p></div><button class="icon-btn" data-wk="1" aria-label="Next week">'+I.right+'</button></div>';
@@ -780,26 +804,47 @@ function issuesSheet(){
     r.querySelectorAll('[data-fewer]').forEach(b=>b.addEventListener('click',()=>{const w=W(),c=client(b.dataset.fewer);w.need[c.id]=live(w).filter(x=>x.c===c.id).length;save();closeSheet();renderWeek();toast(c.name+' set to '+w.need[c.id]+' this week');}));
   });
 }
+function renderToday(){
+  const v=$('#v-today'),now=new Date();
+  if(!S.clients.length){v.innerHTML='<div class="card status"><h2>Welcome</h2><p class="muted">Start by adding your clients.</p><button class="btn btn-primary" id="gocl">Add clients</button></div>';$('#gocl',v).addEventListener('click',()=>go('clients'));return;}
+  const ck=keyOf(mondayOf(now));if(S.weeks[ck])W(ck);
+  const wkNow=S.weeks[ck];if(wkNow&&!wkNow.built&&!wkNow.sched.length&&S.clients.some(c=>need(wkNow,c)>0&&hasTimes(wkNow,c.id))){wkNow.sched=solve(wkNow);wkNow.built=true;save();}
+  let h=todayCard();
+  /* tomorrow */
+  const tm=addDays(now,1),tw=S.weeks[keyOf(mondayOf(tm))],td=(tm.getDay()+6)%7;
+  const T2=tw?live(tw).filter(x=>x.d===td&&client(x.c)).sort((a,b)=>a.s-b.s):[];
+  h+='<div class="card"><div class="today-h" style="margin-bottom:10px"><div><p class="eyebrow">Tomorrow</p><h3 style="font-size:var(--t-1)">'+DAYS[td]+' '+tm.getDate()+' '+MONTHS[tm.getMonth()]+'</h3></div><span class="tag t-start">'+(T2.length?T2.length+' session'+(T2.length>1?'s':''):'Day off')+'</span></div>'+
+     (T2.length?'<div class="mini">'+T2.map(x=>{const c=client(x.c);return '<div class="mini-row" style="--c:'+c.color+'"><span class="num">'+fmt(x.s)+'</span><span class="dot"></span><b>'+esc(c.name)+'</b><small>'+esc(c.loc||'')+'</small></div>';}).join('')+'</div>':'<p class="muted small">Nothing booked.</p>')+'</div>';
+  /* money to collect from people she sees today or tomorrow */
+  const seen=new Set();const TL=(wkNow?live(wkNow).filter(x=>x.d===(now.getDay()+6)%7):[]).concat(T2);
+  const owe=[];TL.forEach(x=>{if(seen.has(x.c))return;seen.add(x.c);const c=client(x.c);if(!c)return;const u=usage(c);if(u.st==='over'||u.st==='due')owe.push({c,u});});
+  if(owe.length){
+    h+='<div class="card"><p class="eyebrow" style="margin-bottom:10px">Payment to collect</p><div class="mini">'+owe.map(({c,u})=>'<div class="owe-row" style="--c:'+c.color+'"><span class="dot"></span><div class="who"><b>'+esc(c.name)+'</b><small>'+(u.st==='over'?'Owes for '+(-u.left)+' session'+(u.left<-1?'s':''):'Pack used up')+'</small></div><button class="btn btn-primary btn-sm" data-paid="'+c.id+'">Paid for '+(c.pack||10)+'</button></div>').join('')+'</div></div>';
+  }
+  v.innerHTML=h;
+  v.querySelectorAll('[data-today]').forEach(b=>b.addEventListener('click',()=>{UI.wk=ck;sessionSheet(b.dataset.today);}));
+  v.querySelectorAll('[data-x]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();cancelSheet(b.dataset.x,b.dataset.xk);}));
+  v.querySelectorAll('[data-paid]').forEach(b=>b.addEventListener('click',()=>{const c=client(b.dataset.paid),u=snapshot();addPay(c,{date:keyOf(new Date()),n:c.pack||10,amt:c.price!=null?c.price:null});render();toast(c.name+' paid for '+(c.pack||10),u);}));
+}
+function stepHead(n,title,sub,right){return '<div class="step-h"><span class="step-n">'+n+'</span><div class="grow"><h2>'+title+'</h2>'+(sub?'<p>'+sub+'</p>':'')+'</div>'+(right||'')+'</div>';}
 function renderWeek(){
-  const v=$('#v-week'),wk=W(),T=S.trainer;
+  const v=$('#v-week'),wk=W();
   if(!wk.built&&!wk.sched.length&&S.clients.some(c=>need(wk,c)>0&&hasTimes(wk,c.id))){wk.sched=solve(wk);wk.built=true;UI.fresh=true;save();}
   const total=S.clients.reduce((a,c)=>a+need(wk,c),0);
   const all=wk.sched.filter(x=>client(x.c)),sched=all.filter(x=>x.st!=='cx');
   const short=S.clients.filter(c=>need(wk,c)>sched.filter(x=>x.c===c.id).length);
   const missing=short.reduce((a,c)=>a+need(wk,c)-sched.filter(x=>x.c===c.id).length,0);
-  const thisWeek=UI.wk===keyOf(mondayOf(new Date()));
-  let h=introCard();
-  if(thisWeek)h+=todayCard();
-  h+=weekBar();
+  const active=S.clients.filter(c=>need(wk,c)>0),withT=active.filter(c=>hasTimes(wk,c.id)),noT=active.filter(c=>!hasTimes(wk,c.id));
   let drive=0;for(let d=0;d<7;d++)drive+=dayDrive(sched.filter(x=>x.d===d).sort((a,b)=>a.s-b.s));
   const away=S.clients.filter(c=>awayDays(c,UI.wk).some(d=>wk.avail.t&&wk.avail.t[d].includes('1')));
-  h+='<div class="card wsum"><div class="wsum-top"><div><b class="num">'+sched.length+' of '+total+'</b> sessions booked'+(drive?'<small>About '+hm(drive)+' driving</small>':'')+'</div>'+
-     (missing?'<button class="tag t-due" id="issues">'+missing+' to sort</button>':(sched.length?'<span class="tag t-ok">All in</span>':''))+'</div>'+
-     (total?'<div class="bar" aria-hidden="true"><i style="width:'+Math.round(Math.min(sched.length,total)/total*100)+'%"></i></div>':'')+
-     (away.length?'<p class="small muted">On holiday: '+away.map(c=>'<b>'+esc(c.name)+'</b> (back '+backOn(c)+')').join(', ')+'</p>':'')+
-     (aiOn()?'<button class="btn btn-primary btn-big" id="pastew" style="width:100%">'+I.spark+'Paste this week’s messages</button>':'')+
-     '<button class="btn btn-soft" id="bookhand" style="width:100%">'+I.plus+'Book a session by hand</button>'+
-     '<div class="two"><button class="btn btn-ghost" id="build"'+(S.clients.length?'':' disabled')+'>Rebuild week</button><button class="btn btn-ghost" id="share"'+(sched.length?'':' disabled')+'>'+I.msg+'Send times</button></div></div>';
+  let h=weekBar()+introCard();
+  /* step 1 */
+  h+='<section class="card step">'+stepHead(1,'Get everyone’s times',withT.length+' of '+active.length+' clients have times'+(away.length?' · '+away.map(c=>esc(c.name)).join(', ')+' on holiday':''),withT.length===active.length&&active.length?'<span class="tag t-ok">Done</span>':'')+
+     (noT.length?'<p class="small muted">Still waiting for: <b>'+noT.map(c=>esc(c.name)).join(', ')+'</b></p>':'')+
+     (aiOn()?'<button class="btn btn-primary btn-big" id="pastew" style="width:100%">'+I.spark+'Paste their messages</button>':'')+
+     '<div class="two"><button class="btn btn-ghost" id="typet">Type times</button><button class="btn btn-ghost" id="bookhand">Book exact time</button></div></section>';
+  /* step 2 */
+  h+='<section class="card step">'+stepHead(2,'Check the week',sched.length+' of '+total+' sessions booked'+(drive?' · about '+hm(drive)+' driving':''),missing?'<button class="tag t-due" id="issues">'+missing+' to sort</button>':(sched.length?'<span class="tag t-ok">All in</span>':''));
   const anyTimes=S.clients.some(c=>hasTimes(wk,c.id));
   if(sched.length||anyTimes){
     const vw=UI.view||'cal';
@@ -807,12 +852,18 @@ function renderWeek(){
     if(vw==='free')h+='<p class="free-legend">Dots show who can train in each hour. Tap an hour for names.</p>'+calendar(wk,all,true);
     else if(vw==='list')h+=agenda(wk,all);
     else h+='<p class="free-legend">Hold a session and drag it to move it. Tap it to cancel or change it.</p>'+calendar(wk,all,false);
-  }
+    h+='<button class="btn btn-ghost btn-sm" id="build" style="justify-self:center">Rebuild the week</button><p class="free-legend" style="margin-top:-8px">Sessions you booked or moved by hand stay where they are.</p>';
+  }else h+='<p class="muted small">The week appears here once times are in.</p>';
+  h+='</section>';
+  /* step 3 */
+  h+='<section class="card step">'+stepHead(3,'Send everyone their times','A WhatsApp message for each client, ready to send')+
+     '<button class="btn btn-big wa-big" id="share" style="width:100%"'+(sched.length?'':' disabled')+'>'+WA+'Send times on WhatsApp</button></section>';
   v.innerHTML=h;v.classList.toggle('fresh',UI.fresh);UI.fresh=false;
   bindWeekBar(v);
   const io=$('#intro',v);if(io)io.addEventListener('toggle',()=>{S.introOpen=io.open;const sm=io.querySelector('.acc-t small');if(sm)sm.textContent='Tap to '+(io.open?'hide':'show')+' the three steps';save();});
   const is=$('#issues',v);if(is)is.addEventListener('click',issuesSheet);
-  const bh=$('#bookhand',v);if(bh)bh.addEventListener('click',()=>bookSheet());
+  $('#bookhand',v).addEventListener('click',()=>bookSheet());
+  $('#typet',v).addEventListener('click',()=>go('times',(noT[0]||{}).id||UI.sel));
   const bb=$('#build',v);if(bb)bb.addEventListener('click',()=>{
     bb.setAttribute('aria-busy','true');bb.textContent='Working it out…';
     setTimeout(()=>{const w=W();w.sched=solve(w);w.built=true;save();UI.fresh=true;renderWeek();
@@ -823,7 +874,6 @@ function renderWeek(){
   v.querySelectorAll('[data-s]').forEach(b=>b.addEventListener('click',()=>{if(UI.noClick)return;sessionSheet(b.dataset.s);}));
   v.querySelectorAll('[data-x]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();cancelSheet(b.dataset.x,b.dataset.xk);}));
   bindDrag(v);
-  v.querySelectorAll('[data-today]').forEach(b=>b.addEventListener('click',()=>{UI.wk=keyOf(mondayOf(new Date()));sessionSheet(b.dataset.today);}));
   v.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{UI.view=b.dataset.view;try{localStorage.setItem(LS+'.view',UI.view);}catch(e){}renderWeek();}));
   v.querySelectorAll('[data-fd]').forEach(b=>b.addEventListener('click',()=>freeSheet(+b.dataset.fd,+b.dataset.fh)));
   const pw=$('#pastew',v);if(pw)pw.addEventListener('click',pasteSheet);
@@ -1034,7 +1084,7 @@ function renderTimes(){
   const isT=UI.sel==='t',c=isT?null:client(UI.sel),col=isT?'#2f5d46':c.color;
   const prevK=keyOf(addDays(fromKey(UI.wk),-7)),prev=peek(prevK);
   const missing=S.clients.filter(x=>need(wk,x)>0&&!hasTimes(wk,x.id));
-  let h=weekBar();
+  let h='<button class="back" id="tback">'+I.left+'Back to the week</button>'+weekBar();
   const order=['t'].concat(S.clients.map(x=>x.id)),ix=order.indexOf(UI.sel);
   const done=S.clients.filter(x=>need(wk,x)>0&&hasTimes(wk,x.id)).length,act=S.clients.filter(x=>need(wk,x)>0).length;
   h+='<div class="switcher" style="--c:'+col+'"><button class="icon-btn" data-p="'+order[(ix-1+order.length)%order.length]+'" aria-label="Previous person">'+I.left+'</button><button class="sw-name" id="pick" aria-label="Choose who"><span class="dot"></span><b>'+esc(isT?tname():c.name)+'</b>'+I.down+'</button><button class="icon-btn" data-p="'+order[(ix+1)%order.length]+'" aria-label="Next person">'+I.right+'</button></div>';
@@ -1067,7 +1117,7 @@ function renderTimes(){
   if(next)h+='<div class="row" style="justify-content:flex-end"><button class="btn btn-primary" data-p="'+next.id+'">Next: '+esc(next.name)+I.right+'</button></div>';
   else if(S.clients.length)h+='<div class="row" style="justify-content:flex-end"><button class="btn btn-primary" id="tobuild">Go and build the week'+I.right+'</button></div>';
   h+='</div>';
-  v.innerHTML=h;bindWeekBar(v);
+  v.innerHTML=h;bindWeekBar(v);$('#tback',v).addEventListener('click',()=>go('week'));
   v.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{UI.sel=b.dataset.p;renderTimes();if(b.closest('.who-card'))v.scrollIntoView({block:'start'});}));
   const pk=$('#pick',v);if(pk)pk.addEventListener('click',pickSheet);
   const key=isT?'t':c.id;
