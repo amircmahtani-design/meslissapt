@@ -422,7 +422,7 @@ button.tag{border:0;min-height:44px;padding:0 16px;font-size:var(--t-sm);cursor:
 <script>
 (function(){
 'use strict';
-const VERSION='v1.8';
+const VERSION='v1.9';
 const STAMP='20/11/2026';
 const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const DS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -1244,7 +1244,7 @@ function migrate17(){
   if(S.m17)return;S.m17=1;
   const T=S.trainer;T.name=T.name||'Melissa';T.home=T.home||'Al Barsha';T.start=6;T.end=20;T.maxPerDay=6;T.buffer=0;T.cur=T.cur||'AED';
   T.usual=av({0:[[6,13],[15,20]],1:[[6,13],[15,20]],2:[[6,13],[15,20]],3:[[6,13],[15,20]],4:[[6,13],[15,20]]});
-  S.travel=Object.assign({},{"al barsha|dubai marina":[15,25],"al barsha|business bay":[20,30],"al barsha|jumeirah 1":[25,40],"al barsha|jlt":[15,25],"al barsha|downtown":[25,40],"al barsha|arabian ranches":[20,30],"al barsha|mirdif":[45,70],"al barsha|palm jumeirah":[15,25],"al barsha|dubai hills":[15,25],"business bay|dubai marina":[30,50],"dubai marina|jumeirah 1":[35,55],"dubai marina|jlt":[10,15],"downtown|dubai marina":[35,55],"arabian ranches|dubai marina":[25,40],"dubai marina|mirdif":[55,90],"dubai marina|palm jumeirah":[10,15],"dubai hills|dubai marina":[20,30],"business bay|jumeirah 1":[15,25],"business bay|jlt":[30,50],"business bay|downtown":[10,15],"arabian ranches|business bay":[30,50],"business bay|mirdif":[30,50],"business bay|palm jumeirah":[30,50],"business bay|dubai hills":[20,30],"jlt|jumeirah 1":[35,55],"downtown|jumeirah 1":[10,15],"arabian ranches|jumeirah 1":[35,55],"jumeirah 1|mirdif":[30,50],"jumeirah 1|palm jumeirah":[30,50],"dubai hills|jumeirah 1":[25,40],"downtown|jlt":[35,55],"arabian ranches|jlt":[25,40],"jlt|mirdif":[55,90],"jlt|palm jumeirah":[15,25],"dubai hills|jlt":[25,40],"arabian ranches|downtown":[30,50],"downtown|mirdif":[30,50],"downtown|palm jumeirah":[30,50],"downtown|dubai hills":[20,30],"arabian ranches|mirdif":[40,65],"arabian ranches|palm jumeirah":[30,50],"arabian ranches|dubai hills":[15,25],"mirdif|palm jumeirah":[50,80],"dubai hills|mirdif":[40,65],"dubai hills|palm jumeirah":[20,30]},S.travel||{});
+  S.travel=Object.assign({},S.travel||{},{"al barsha|dubai marina":[15,25],"al barsha|business bay":[20,30],"al barsha|jumeirah 1":[25,40],"al barsha|jlt":[15,25],"al barsha|downtown":[25,40],"al barsha|arabian ranches":[20,30],"al barsha|mirdif":[45,70],"al barsha|palm jumeirah":[15,25],"al barsha|dubai hills":[15,25],"business bay|dubai marina":[30,50],"dubai marina|jumeirah 1":[35,55],"dubai marina|jlt":[10,15],"downtown|dubai marina":[35,55],"arabian ranches|dubai marina":[25,40],"dubai marina|mirdif":[55,90],"dubai marina|palm jumeirah":[10,15],"dubai hills|dubai marina":[20,30],"business bay|jumeirah 1":[15,25],"business bay|jlt":[30,50],"business bay|downtown":[10,15],"arabian ranches|business bay":[30,50],"business bay|mirdif":[30,50],"business bay|palm jumeirah":[30,50],"business bay|dubai hills":[20,30],"jlt|jumeirah 1":[35,55],"downtown|jumeirah 1":[10,15],"arabian ranches|jumeirah 1":[35,55],"jumeirah 1|mirdif":[30,50],"jumeirah 1|palm jumeirah":[30,50],"dubai hills|jumeirah 1":[25,40],"downtown|jlt":[35,55],"arabian ranches|jlt":[25,40],"jlt|mirdif":[55,90],"jlt|palm jumeirah":[15,25],"dubai hills|jlt":[25,40],"arabian ranches|downtown":[30,50],"downtown|mirdif":[30,50],"downtown|palm jumeirah":[30,50],"downtown|dubai hills":[20,30],"arabian ranches|mirdif":[40,65],"arabian ranches|palm jumeirah":[30,50],"arabian ranches|dubai hills":[15,25],"mirdif|palm jumeirah":[50,80],"dubai hills|mirdif":[40,65],"dubai hills|palm jumeirah":[20,30],"al barsha|jumeirah park":[20,30],"dubai marina|jumeirah park":[10,15],"business bay|jumeirah park":[35,55],"jumeirah 1|jumeirah park":[40,65],"jlt|jumeirah park":[10,15],"downtown|jumeirah park":[35,55],"arabian ranches|jumeirah park":[25,40],"jumeirah park|mirdif":[55,90],"jumeirah park|palm jumeirah":[15,25],"dubai hills|jumeirah park":[25,40]});
   S.clients=S.clients.filter(c=>!c.example);
   const now=new Date(),cur=keyOf(mondayOf(now)),prev=keyOf(addDays(mondayOf(now),-7));
   const awayFrom=keyOf(addDays(now,1)),awayTo=keyOf(addDays(now,16));
@@ -1265,7 +1265,8 @@ function migrate17(){
   E.forEach((e,i)=>{const id='x'+(i+1);S.clients.push({id,name:e[0],loc:e[1],sessions:e[2],len:e[3],pack:e[4],price:e[5],spread:e[6],color:col(),usual:av(e[7]),example:true});target[id]=e[8];});
   const nad=S.clients.find(c=>c.name==='Nadia'&&c.example);if(nad)nad.away={from:awayFrom,to:awayTo};
   const lia=S.clients.find(c=>c.id==='lia');if(lia&&!lia.usual){lia.usual=av({1:[[10,12]],3:[[10,12]]});lia.sessions=2;}
-  const amir=S.clients.find(c=>c.id==='amir');if(amir)amir.sessions=3;
+  const amir=S.clients.find(c=>c.id==='amir');if(amir){amir.sessions=3;amir.loc=amir.loc||'Jumeirah Park';}
+  if(lia)lia.loc=lia.loc||'Jumeirah Park';
   S.weeks={};S.pay={};S.introDone=false;
   [prev,cur].forEach(k=>{const w=W(k);w.sched=solve(w);w.built=true;});
   const pw=S.weeks[prev];
@@ -1281,7 +1282,7 @@ function migrate17(){
 }
 /* ---------- start ---------- */
 $('#ver').textContent=VERSION;$('#ver2').textContent=VERSION+' · '+STAMP;
-if(!S.m18){S.m18=1;S.m17=0;}
+if(!S.m19){S.m18=1;S.m19=1;S.m17=0;}
 migrate17();
 render();
 setTimeout(()=>{connect();connectAI();},0);
