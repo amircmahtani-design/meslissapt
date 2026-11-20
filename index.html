@@ -173,8 +173,14 @@ section.view{display:grid;gap:var(--s5);grid-template-columns:minmax(0,1fr)}
 .stepper{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px}
 .stepper button{width:40px;height:40px;border-radius:50%;border:0;background:var(--surface);box-shadow:0 2px 6px -3px rgb(0 0 0 / .25);font-size:1.25rem;font-weight:600;display:grid;place-items:center}
 .stepper output{min-width:34px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
-.field-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:wrap;padding:var(--s3) 0;border-top:1px solid var(--line)}
+.field-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:nowrap;padding:var(--s3) 0;border-top:1px solid var(--line)}
 .field-row label,.field-row .lbl{font-weight:650}
+.field-row>.lbl,.field-row>label{flex:1;min-width:0}
+.field-row>:last-child{flex:none}
+.field-row.col{flex-direction:column;align-items:stretch;gap:10px}
+.field-row.col>:last-child{flex:initial}
+.pills.fill{display:grid;grid-template-columns:repeat(var(--k),minmax(0,1fr))}
+.pills.fill .pill{min-width:0;padding:0 6px}
 .field-row .hint{display:block;font-size:var(--t-xs);font-weight:500;color:var(--ink-3)}
 
 .grid-wrap{user-select:none;-webkit-user-select:none}
@@ -193,8 +199,8 @@ section.view{display:grid;gap:var(--s5);grid-template-columns:minmax(0,1fr)}
 .cell.on.clash{box-shadow:inset 0 0 0 2px rgb(255 255 255 / .7)}
 .grid-wrap{--cell:30px}
 @media (min-width:600px){.grid-wrap{--cell:34px}.g-head button{font-size:.9rem}}
-.summary{display:flex;flex-wrap:wrap;gap:6px}
-.summary span{padding:6px 12px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);font-size:var(--t-xs);font-weight:600;font-variant-numeric:tabular-nums}
+.summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.summary span{text-align:center;padding:6px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);font-size:var(--t-xs);font-weight:600;font-variant-numeric:tabular-nums}
 .legend-mini{display:flex;gap:var(--s4);flex-wrap:wrap;font-size:var(--t-xs);color:var(--ink-3);font-weight:600}
 .legend-mini i{display:inline-block;width:14px;height:14px;border-radius:5px;vertical-align:-2px;margin-right:6px}
 
@@ -214,8 +220,8 @@ select.input{width:auto;appearance:none;-webkit-appearance:none;padding-right:36
 .pills{display:flex;gap:6px;flex-wrap:wrap}
 .pill{min-height:44px;min-width:52px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:650;font-size:var(--t-sm);font-variant-numeric:tabular-nums}
 .pill[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.swatches{display:flex;flex-wrap:wrap;gap:10px}
-.sw{width:44px;height:44px;border-radius:15px;border:0;background:var(--c);position:relative;transition:transform .18s var(--ease)}
+.swatches{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.sw{width:100%;aspect-ratio:1;min-height:40px;height:auto;border-radius:15px;border:0;background:var(--c);position:relative;transition:transform .18s var(--ease)}
 .sw[aria-pressed="true"]{box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--c)}
 .sw:active{transform:scale(.94)}
 .switch{position:relative;width:56px;height:34px;flex:none}
@@ -270,7 +276,9 @@ dialog.sheet::backdrop{background:rgb(35 28 18 / .38)}
 .pips i.over{background:transparent;box-shadow:inset 0 0 0 2px var(--warn)}
 .pay-when{font-size:var(--t-sm);color:var(--ink-2)}
 .pay-when b{color:var(--ink)}
-.pay-sum{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.pay-sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;max-width:640px;margin-inline:auto;width:100%}
+.pay-sum .tag{margin:0;text-align:center;padding:10px 6px;font-size:var(--t-sm)}
+@media (max-width:599px){.pay-sum{grid-template-columns:1fr 1fr}}
 .hist{display:grid}
 .hist-row{display:flex;align-items:center;gap:12px;min-height:52px;border-top:1px solid var(--line);font-size:var(--t-sm)}
 .hist-row .grow{flex:1;min-width:0}
@@ -278,6 +286,48 @@ dialog.sheet::backdrop{background:rgb(35 28 18 / .38)}
 .form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .form-grid label{display:grid;gap:6px;font-weight:650;font-size:var(--t-sm)}
 @media (max-width:480px){.form-grid{grid-template-columns:1fr 1fr}.form-grid label:first-child{grid-column:1/-1}}
+.wl-s{display:none}
+.switcher{display:flex;align-items:center;gap:10px}
+.sw-name{flex:1;min-width:0;min-height:52px;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:999px;border:1px solid color-mix(in srgb,var(--c) 40%,var(--line));background:color-mix(in srgb,var(--c) 14%,var(--surface));font-size:1.15rem;transition:transform .18s var(--ease)}
+.sw-name:active{transform:scale(.98)}
+.sw-name b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.sw-name svg{width:18px;height:18px;flex:none;color:var(--ink-2)}
+.sw-name .dot{width:14px;height:14px}
+.sw-sub{text-align:center;font-size:var(--t-xs);color:var(--ink-3);font-weight:600;margin-top:-12px}
+.daystrip{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:6px}
+.daystrip button{min-height:52px;border:1px solid var(--line);border-radius:16px;background:var(--surface);font-weight:700;font-size:.85rem;line-height:1.15;display:grid;place-items:center;align-content:center}
+.daystrip small{color:var(--ink-3);font-weight:600;font-size:.78rem}
+.day{scroll-margin-top:136px}
+.pay-acts{display:flex;align-items:center;gap:8px}
+.pay-acts .btn-primary{flex:1}
+@media (max-width:899px){.legend{display:none}}
+@media (max-width:599px){
+  .wl-l{display:none}.wl-s{display:inline}
+  .weekbar h1{font-size:1.75rem}
+  .status{padding:var(--s5) var(--s4);gap:var(--s3)}
+  .meter i{width:10px;height:10px}
+  .meter{gap:4px}
+  .card{padding:var(--s4)}
+  .pay-card{padding:var(--s4) var(--s4) var(--s4)}
+  .grid-wrap{--cell:34px}
+  .issues{padding:var(--s4)}
+  .top-row{min-height:56px}
+}
+.bar{width:100%;max-width:420px;height:12px;border-radius:999px;background:#ece5d9;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;background:var(--accent);transition:width .4s var(--ease)}
+.status-acts{width:100%;max-width:440px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:599px){.status-acts{grid-template-columns:minmax(0,1fr)}}
+.status-acts .btn{width:100%;padding:0 12px}
+.status-acts .btn:only-child{grid-column:1/-1}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two .btn{padding:0 10px}
+.hours{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+.hours select{width:100%}
+.pick-row{display:flex;align-items:center;gap:14px;width:100%;min-height:60px;padding:8px 16px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);text-align:left}
+.pick-row .big-dot{width:30px;height:30px;border-radius:11px;background:var(--c);flex:none}
+.pick-row b{flex:1;min-width:0;font-size:1.05rem}
+.pick-row small{font-size:var(--t-sm);color:var(--ink-3);font-weight:600}
+.pick-row[aria-pressed="true"]{border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,var(--surface))}
 .foot{text-align:center;color:var(--ink-3);font-size:var(--t-xs);padding:var(--s7) 0 var(--s4)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -310,13 +360,13 @@ dialog.sheet::backdrop{background:rgb(35 28 18 / .38)}
 <script>
 (function(){
 'use strict';
-const VERSION='v1.3';
+const VERSION='v1.4';
 const STAMP='20/11/2026';
 const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const DS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const DK=['mon','tue','wed','thu','fri','sat','sun'];
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
-const COLORS=['#d0603e','#2e8a86','#d69a26','#7c5cc4','#4f8a4b','#d2607c','#3d68b8','#a7643a','#3a9cc4','#8a4f7d','#8b8a2f','#e07a5f','#5a7a8c'];
+const COLORS=['#d0603e','#2e8a86','#d69a26','#7c5cc4','#4f8a4b','#d2607c','#3d68b8','#a7643a','#3a9cc4','#8a4f7d','#8b8a2f','#e07a5f','#5a7a8c','#d6589a'];
 const Z='0'.repeat(48);
 const LS='ptweek.v1';
 const LOCK='<svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-label="Locked"><rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
@@ -328,6 +378,8 @@ const I={
   copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="3"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>',
   msg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12z"/></svg>'
 };
 
@@ -350,6 +402,7 @@ function weekLabel(k){const a=fromKey(k),b=addDays(a,6);
   if(a.getMonth()===b.getMonth())return a.getDate()+' to '+b.getDate()+' '+MONTHS[b.getMonth()]+' '+b.getFullYear();
   return a.getDate()+' '+MONTHS[a.getMonth()]+' to '+b.getDate()+' '+MONTHS[b.getMonth()]+' '+b.getFullYear();}
 const dayDate=(k,d)=>addDays(fromKey(k),d);
+function weekShort(k){const a=fromKey(k),b=addDays(a,6),M=x=>MONTHS[x.getMonth()].slice(0,3);return a.getMonth()===b.getMonth()?a.getDate()+' to '+b.getDate()+' '+M(b):a.getDate()+' '+M(a)+' to '+b.getDate()+' '+M(b);}
 const dm=d=>pad(d.getDate())+'/'+pad(d.getMonth()+1);
 
 /* ---------- state ---------- */
@@ -572,7 +625,7 @@ function render(){
   if(UI.tab==='week')renderWeek();else if(UI.tab==='times')renderTimes();else if(UI.tab==='pay')renderPay();else renderClients();
 }
 function weekBar(){
-  return '<div class="weekbar"><button class="icon-btn" data-wk="-1" aria-label="Previous week">'+I.left+'</button><div><h1 class="num">'+weekLabel(UI.wk)+'</h1><p class="sub">'+(UI.wk===keyOf(mondayOf(new Date()))?'This week':UI.wk===keyOf(addDays(mondayOf(new Date()),7))?'Next week':'Week of '+dm(fromKey(UI.wk))+'/'+fromKey(UI.wk).getFullYear())+'</p></div><button class="icon-btn" data-wk="1" aria-label="Next week">'+I.right+'</button></div>';
+  return '<div class="weekbar"><button class="icon-btn" data-wk="-1" aria-label="Previous week">'+I.left+'</button><div><h1 class="num"><span class="wl-l">'+weekLabel(UI.wk)+'</span><span class="wl-s">'+weekShort(UI.wk)+'</span></h1><p class="sub">'+(UI.wk===keyOf(mondayOf(new Date()))?'This week':UI.wk===keyOf(addDays(mondayOf(new Date()),7))?'Next week':'Week of '+dm(fromKey(UI.wk))+'/'+fromKey(UI.wk).getFullYear())+'</p></div><button class="icon-btn" data-wk="1" aria-label="Next week">'+I.right+'</button></div>';
 }
 function bindWeekBar(root){root.querySelectorAll('[data-wk]').forEach(b=>b.addEventListener('click',()=>{UI.wk=keyOf(addDays(fromKey(UI.wk),7*+b.dataset.wk));UI.fresh=false;render();}));}
 
@@ -591,13 +644,13 @@ function renderWeek(){
   else{title=sched.length+' of '+total+' sessions are in';body=short.length+' client'+(short.length>1?'s need':' needs')+' a look below.';}
   let meter='';S.clients.forEach(c=>{const n=need(wk,c),p=Math.min(n,sched.filter(x=>x.c===c.id).length);for(let i=0;i<n;i++)meter+='<i style="--c:'+c.color+'"'+(i<p?' class="on"':'')+'></i>';});
   let h=weekBar();
-  h+='<div class="card status"><h2>'+esc(title)+'</h2><p class="muted">'+esc(body)+'</p>'+(total?'<div class="meter" aria-hidden="true">'+meter+'</div>':'')+
-     '<div class="actions"><button class="btn btn-primary btn-big" id="build"'+(S.clients.length?'':' disabled')+'>'+I.spark+(wk.built||sched.length?'Rebuild the week':'Build the week')+'</button>'+
+  h+='<div class="card status"><h2>'+esc(title)+'</h2><p class="muted">'+esc(body)+'</p>'+(total?'<div class="bar" aria-hidden="true"><i style="width:'+Math.round(Math.min(sched.length,total)/total*100)+'%"></i></div>':'')+
+     '<div class="actions status-acts"><button class="btn btn-primary btn-big" id="build"'+(S.clients.length?'':' disabled')+'>'+I.spark+(wk.built||sched.length?'Rebuild the week':'Build the week')+'</button>'+
      (sched.length?'<button class="btn btn-ghost btn-big" id="share">'+I.msg+'Send times</button>':'')+'</div></div>';
   if((wk.built||sched.length)&&short.length){
     h+='<div class="issues"><h3>Needs a look</h3>';
     short.forEach(c=>{const p=sched.filter(x=>x.c===c.id).length,n=need(wk,c);
-      h+='<div class="issue" style="--c:'+c.color+'"><div class="issue-top"><span class="dot"></span>'+esc(c.name)+' <span class="muted small" style="font-weight:600">'+p+' of '+n+' placed</span></div><p>'+esc(why(wk,c))+'</p><div class="row"><button class="btn btn-ghost btn-sm" data-times="'+c.id+'">Change '+esc(c.name)+'’s times</button><button class="btn btn-ghost btn-sm" data-fewer="'+c.id+'">Book '+p+' this week</button></div></div>';});
+      h+='<div class="issue" style="--c:'+c.color+'"><div class="issue-top"><span class="dot"></span>'+esc(c.name)+' <span class="muted small" style="font-weight:600">'+p+' of '+n+' placed</span></div><p>'+esc(why(wk,c))+'</p><div class="two"><button class="btn btn-ghost btn-sm" data-times="'+c.id+'">Change times</button><button class="btn btn-ghost btn-sm" data-fewer="'+c.id+'">'+(p?'Book '+p+' this week':'Skip this week')+'</button></div></div>';});
     h+='</div>';
   }
   if(sched.length){
@@ -616,14 +669,16 @@ function renderWeek(){
   v.querySelectorAll('[data-times]').forEach(b=>b.addEventListener('click',()=>go('times',b.dataset.times)));
   v.querySelectorAll('[data-fewer]').forEach(b=>b.addEventListener('click',()=>{const w=W(),c=client(b.dataset.fewer);w.need[c.id]=live(w).filter(x=>x.c===c.id).length;save();renderWeek();toast(c.name+' set to '+w.need[c.id]+' this week');}));
   v.querySelectorAll('[data-s]').forEach(b=>b.addEventListener('click',()=>sessionSheet(b.dataset.s)));
+  v.querySelectorAll('[data-jump]').forEach(b=>b.addEventListener('click',()=>{const el=document.getElementById('day-'+b.dataset.jump);if(el)el.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});}));
 }
 function workDays(wk,sched){const o=[];for(let d=0;d<7;d++)if((wk.avail.t&&wk.avail.t[d].includes('1'))||sched.some(x=>x.d===d))o.push(d);return o;}
 function agenda(wk,sched){
-  let h='<div class="agenda">',i=0;
+  let h='<div class="agenda">',i=0;const wd=workDays(wk,sched);
+  h+='<div class="daystrip" style="--n:'+wd.length+'">'+wd.map(d=>{const n=sched.filter(x=>x.d===d&&x.st!=="cx").length;return '<button data-jump="'+d+'">'+DS[d]+'<small class="num">'+n+'</small></button>';}).join('')+'</div>';
   workDays(wk,sched).forEach(d=>{
     const L=sched.filter(x=>x.d===d).sort((a,b)=>a.s-b.s);const dt=dayDate(UI.wk,d);
     const nL=L.filter(x=>x.st!=='cx').length;
-    h+='<div class="day"><div class="day-h"><h3>'+DAYS[d]+' '+dt.getDate()+' '+MONTHS[dt.getMonth()]+'</h3><span>'+(nL?nL+' session'+(nL>1?'s':''):'')+'</span></div><div class="sessions">';
+    h+='<div class="day" id="day-'+d+'"><div class="day-h"><h3>'+DAYS[d]+' '+dt.getDate()+' '+MONTHS[dt.getMonth()]+'</h3><span>'+(nL?nL+' session'+(nL>1?'s':''):'')+'</span></div><div class="sessions">';
     if(!L.length)h+='<p class="free">Nothing booked</p>';
     L.forEach(x=>{const c=client(x.c);h+='<button class="sess'+(valid(wk,x)?'':' bad')+(x.st?' st-'+x.st:'')+'" style="--c:'+c.color+';--i:'+(i++)+'" data-s="'+x.id+'"><span class="time">'+fmt(x.s)+'</span><span class="who"><b>'+esc(c.name)+'</b><small class="num">'+(x.st==='cx'?'Cancelled, not charged':x.st==='late'?'Late cancel, charged':'until '+fmt(x.s+x.len))+(valid(wk,x)?'':' · check this one')+'</small></span>'+(x.lock?LOCK:'')+'</button>';});
     h+='</div></div>';
@@ -658,7 +713,7 @@ function sessionSheet(id){
   const bad=!valid(wk,x);
   openSheet(sheetHead('<span style="color:'+c.color+'">●</span> '+esc(c.name),DAYS[x.d]+' '+dt.getDate()+' '+MONTHS[dt.getMonth()]+', '+fmt(x.s)+' to '+fmt(x.s+x.len))+
     (bad?'<div class="issues" style="padding:16px"><p style="color:var(--warn);font-weight:600">This time no longer matches '+esc(c.name)+'’s times or yours, or it overlaps someone. Move it or rebuild.</p></div>':'')+
-    '<div class="stack"><p class="eyebrow">This session</p><div class="pills">'+[['','Booked'],['cx','Cancelled, not charged'],['late','Late cancel, charged']].map(([k,l])=>'<button class="pill" data-st="'+k+'" aria-pressed="'+((x.st||'')===k)+'">'+l+'</button>').join('')+'</div><p class="small muted">Cancelled sessions don’t count towards their 10. Late cancels do.</p></div>'+
+    '<div class="stack"><p class="eyebrow">This session</p><div class="pills fill" style="--k:3">'+[['','Booked'],['cx','Cancelled'],['late','Late cancel']].map(([k,l])=>'<button class="pill" data-st="'+k+'" aria-pressed="'+((x.st||'')===k)+'">'+l+'</button>').join('')+'</div><p class="small muted">Cancelled: not charged, doesn’t count towards their pack. Late cancel: charged, counts.</p></div>'+
     '<div class="field-row"><span class="lbl">Lock this time<span class="hint">A rebuild keeps locked sessions where they are.</span></span><label class="switch"><input type="checkbox" id="lk"'+(x.lock?' checked':'')+' aria-label="Lock this time"><span></span></label></div>'+
     '<div class="stack"><p class="eyebrow">Move to another free time</p>'+(slots?'<div class="slots">'+slots+'</div>':'<p class="muted small">No other free times fit '+esc(c.name)+' this week.</p>')+'</div>'+
     '<div class="row" style="padding-top:8px"><button class="btn btn-danger" id="rm">Remove from this week</button></div>',
@@ -695,18 +750,17 @@ function renderTimes(){
   const prevK=keyOf(addDays(fromKey(UI.wk),-7)),prev=peek(prevK);
   const missing=S.clients.filter(x=>need(wk,x)>0&&!hasTimes(wk,x.id));
   let h=weekBar();
-  h+='<div class="people" role="group" aria-label="Whose times">';
-  h+='<button class="person" style="--c:#2f5d46" aria-pressed="'+isT+'" data-p="t"><span class="dot"></span>'+esc(T.name||'Trainer')+'</button>';
-  S.clients.forEach(x=>h+='<button class="person'+(hasTimes(wk,x.id)?'':' empty')+'" style="--c:'+x.color+'" aria-pressed="'+(UI.sel===x.id)+'" data-p="'+x.id+'"><span class="dot"></span>'+esc(x.name)+'</button>');
-  h+='</div>';
+  const order=['t'].concat(S.clients.map(x=>x.id)),ix=order.indexOf(UI.sel);
+  const done=S.clients.filter(x=>need(wk,x)>0&&hasTimes(wk,x.id)).length,act=S.clients.filter(x=>need(wk,x)>0).length;
+  h+='<div class="switcher" style="--c:'+col+'"><button class="icon-btn" data-p="'+order[(ix-1+order.length)%order.length]+'" aria-label="Previous person">'+I.left+'</button><button class="sw-name" id="pick" aria-label="Choose who"><span class="dot"></span><b>'+esc(isT?(T.name||'Trainer'):c.name)+'</b>'+I.down+'</button><button class="icon-btn" data-p="'+order[(ix+1)%order.length]+'" aria-label="Next person">'+I.right+'</button></div>';
+  h+='<p class="sw-sub">'+done+' of '+act+' clients have times this week</p>';
   if(AI||(prev&&missing.length))h+='<div class="actions">'+(AI?'<button class="btn btn-soft" id="paste">'+I.spark+'Paste their messages</button>':'')+(prev&&missing.length?'<button class="btn btn-ghost" id="copyall">'+I.copy+'Copy last week for '+missing.length+' missing</button>':'')+'</div>';
   h+='<div class="card who-card" style="--c:'+col+'">';
   if(isT){
-    h+='<div class="who-head"><div class="big-dot" aria-hidden="true"></div><div><h2>'+esc(T.name||'Trainer')+'</h2><p>When you can train this week. Hatched hours are closed to clients.</p></div></div>';
+    h+='<p class="small muted">Your hours this week. Clients can only be booked inside them.</p>';
   }else{
     const n=need(wk,c);
-    h+='<div class="who-head"><div class="big-dot" aria-hidden="true"></div><div><h2>'+esc(c.name)+'</h2><p>'+c.len+' min sessions'+(c.spread?', spread across the week':'')+'</p></div></div>'+
-      '<div class="field-row"><span class="lbl">Sessions this week<span class="hint">'+(n===0?'Not training this week':'Usually '+c.sessions)+'</span></span><div class="stepper"><button data-n="-1" aria-label="One fewer">−</button><output class="num">'+n+'</output><button data-n="1" aria-label="One more">+</button></div></div>';
+    h+='<div class="field-row" style="border-top:0;padding-top:0"><span class="lbl">Sessions this week<span class="hint">'+(n===0?'Not training this week':'Usually '+c.sessions+' · '+c.len+' min each')+'</span></span><div class="stepper"><button data-n="-1" aria-label="One fewer">−</button><output class="num">'+n+'</output><button data-n="1" aria-label="One more">+</button></div></div>';
   }
   h+='<div class="row spread"><p class="small muted">Drag to paint the hours they can do. Tap a day or an hour to fill it.</p><div class="row">'+
      '<button class="btn btn-ghost btn-sm" id="same"'+(prev&&(isT?prev.avail.t:prev.avail[c.id])?'':' disabled')+'>Same as last week</button>'+
@@ -723,6 +777,7 @@ function renderTimes(){
   h+='</div>';
   v.innerHTML=h;bindWeekBar(v);
   v.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{UI.sel=b.dataset.p;renderTimes();if(b.closest('.who-card'))v.scrollIntoView({block:'start'});}));
+  const pk=$('#pick',v);if(pk)pk.addEventListener('click',pickSheet);
   const key=isT?'t':c.id;
   const setMask=w=>{wk.avail[key]=w;save();renderTimes();};
   $('#clr',v).addEventListener('click',()=>{const u=snapshot();setMask(blankWeek());toast('Cleared',u);});
@@ -736,6 +791,13 @@ function renderTimes(){
   v.querySelectorAll('[data-n]').forEach(b=>b.addEventListener('click',()=>{const n=Math.max(0,Math.min(7,need(wk,c)+(+b.dataset.n)));wk.need[c.id]=n;save();renderTimes();}));
   bindGrid(v,wk,key,isT);
   summary(wk,key);
+}
+function pickSheet(){
+  const wk=W(),T=S.trainer;
+  const row=(id,name,col,note)=>'<button class="pick-row" style="--c:'+col+'" aria-pressed="'+(UI.sel===id)+'" data-pk="'+id+'"><span class="big-dot"></span><b>'+esc(name)+'</b><small>'+note+'</small></button>';
+  openSheet(sheetHead('Whose times?')+'<div class="list">'+row('t',T.name||'Trainer','#2f5d46','Your hours')+
+    S.clients.map(x=>row(x.id,x.name,x.color,need(wk,x)===0?'Not this week':hasTimes(wk,x.id)?'Times in':'<span style="color:var(--warn)">No times yet</span>')).join('')+'</div>',
+  r=>r.querySelectorAll('[data-pk]').forEach(b=>b.addEventListener('click',()=>{UI.sel=b.dataset.pk;closeSheet();renderTimes();})));
 }
 function gridHTML(wk,isT,c,col){
   const T=S.trainer,key=isT?'t':c.id,M=wk.avail[key]||blankWeek(),TM=wk.avail.t||blankWeek();
@@ -864,7 +926,7 @@ function renderPay(){
   const cnt=k=>rows.filter(r=>r.u.st===k).length;
   let h='<div class="weekbar"><div><h1>Payments</h1><p class="sub">Packs of sessions. Cancelled sessions don’t count, late cancels do.</p></div></div>';
   const due=cnt('over')+cnt('due');
-  h+='<div class="pay-sum">'+(due?'<span class="tag t-due" style="margin:0">'+due+' due now</span>':'')+(cnt('soon')?'<span class="tag t-soon" style="margin:0">'+cnt('soon')+' due soon</span>':'')+(cnt('ok')?'<span class="tag t-ok" style="margin:0">'+cnt('ok')+' paid up</span>':'')+(cnt('start')?'<span class="tag t-start" style="margin:0">'+cnt('start')+' to set up</span>':'')+'</div>';
+  h+='<div class="pay-sum"><span class="tag t-due">'+due+' due now</span><span class="tag t-soon">'+cnt('soon')+' due soon</span><span class="tag t-ok">'+cnt('ok')+' paid up</span><span class="tag t-start">'+cnt('start')+' to set up</span></div>';
   if(!rows.length)h+='<p class="muted" style="text-align:center">Add clients first.</p>';
   h+='<div class="pay-grid">';
   rows.forEach(({c,u})=>{
@@ -873,9 +935,9 @@ function renderPay(){
     h+='<div class="pay-card" style="--c:'+c.color+'"><div class="pay-top"><span class="big-dot"></span><b>'+esc(c.name)+'</b><span class="tag t-'+u.st+'">'+tagText(u)+'</span></div>'+
       (u.st==='start'?'':'<div class="left"><b>'+Math.max(u.left,0)+'</b><span>session'+(u.left===1?'':'s')+' left · '+u.used+' done</span></div><div class="pips" aria-hidden="true">'+pips+'</div>')+
       '<p class="pay-when">'+payLine(c,u)+'</p>'+
-      '<div class="row"><button class="btn btn-primary btn-sm" data-paid="'+c.id+'">Paid for '+pk+(c.price!=null?' · '+money(c.price):'')+'</button>'+
-      (u.st!=='start'&&u.st!=='ok'?'<button class="btn btn-ghost btn-sm" data-rem="'+c.id+'">'+I.copy+'Reminder</button>':'')+
-      '<button class="btn btn-ghost btn-sm" data-hist="'+c.id+'">'+(u.st==='start'?'Set up':'History')+'</button></div></div>';
+      '<div class="pay-acts"><button class="btn btn-primary btn-sm" data-paid="'+c.id+'">Paid for '+pk+(c.price!=null?' · '+money(c.price):'')+'</button>'+
+      (u.st==='start'?'<button class="btn btn-ghost btn-sm" data-hist="'+c.id+'">Set up</button>':
+      (u.st!=='ok'?'<button class="icon-btn" data-rem="'+c.id+'" aria-label="Copy payment reminder">'+I.msg+'</button>':'')+'<button class="icon-btn" data-hist="'+c.id+'" aria-label="History and add payment">'+I.list+'</button>')+'</div></div>';
   });
   h+='</div>';
   v.innerHTML=h;
@@ -908,11 +970,11 @@ function nextColor(){const used=S.clients.map(c=>c.color);return COLORS.find(c=>
 function renderClients(){
   const v=$('#v-clients'),T=S.trainer;
   let h='<div class="card stack"><div class="who-head" style="--c:#2f5d46"><div class="big-dot" aria-hidden="true"></div><div><h2>Trainer</h2><p>Your hours and limits. The planner never breaks these.</p></div></div>'+
-    '<div class="field-row"><label for="tn">Your name</label><input class="input" id="tn" style="max-width:240px" value="'+esc(T.name)+'" placeholder="Trainer"></div>'+
-    '<div class="field-row"><span class="lbl">Working hours<span class="hint">The rows you see on the Times grid</span></span><div class="row"><select class="input num" id="ts" aria-label="Start">'+hourOpts(0,23,T.start)+'</select><span class="muted">to</span><select class="input num" id="te" aria-label="End">'+hourOpts(1,24,T.end)+'</select></div></div>'+
-    '<div class="field-row"><span class="lbl">Most sessions in a day</span><div class="stepper"><button data-mx="-1" aria-label="Fewer">−</button><output class="num">'+T.maxPerDay+'</output><button data-mx="1" aria-label="More">+</button></div></div>'+
-    '<div class="field-row"><label for="tcur">Currency<span class="hint">For pack prices and reminders</span></label><input class="input" id="tcur" style="max-width:120px" value="'+esc(T.cur||'AED')+'"></div>'+
-    '<div class="field-row"><span class="lbl">Gap between sessions<span class="hint">Travel or reset time</span></span><div class="pills">'+[0,15,30,45].map(g=>'<button class="pill" data-gap="'+g+'" aria-pressed="'+(+T.buffer===g)+'">'+(g?g+' min':'None')+'</button>').join('')+'</div></div></div>';
+    '<div class="field-row"><label for="tn">Your name</label><input class="input" id="tn" style="width:170px" value="'+esc(T.name)+'" placeholder="Trainer"></div>'+
+    '<div class="field-row col"><span class="lbl">Working hours<span class="hint">The rows you see on the Times grid</span></span><div class="hours"><select class="input num" id="ts" aria-label="Start">'+hourOpts(0,23,T.start)+'</select><span class="muted">to</span><select class="input num" id="te" aria-label="End">'+hourOpts(1,24,T.end)+'</select></div></div>'+
+    '<div class="field-row"><span class="lbl">Max sessions a day</span><div class="stepper"><button data-mx="-1" aria-label="Fewer">−</button><output class="num">'+T.maxPerDay+'</output><button data-mx="1" aria-label="More">+</button></div></div>'+
+    '<div class="field-row"><label for="tcur">Currency<span class="hint">For pack prices and reminders</span></label><input class="input" id="tcur" style="width:100px;text-align:center" value="'+esc(T.cur||'AED')+'"></div>'+
+    '<div class="field-row col"><span class="lbl">Gap between sessions<span class="hint">Travel or reset time</span></span><div class="pills fill" style="--k:4">'+[0,15,30,45].map(g=>'<button class="pill" data-gap="'+g+'" aria-pressed="'+(+T.buffer===g)+'">'+(g?g+' min':'None')+'</button>').join('')+'</div></div></div>';
   h+='<div class="row spread"><h2 style="font-size:var(--t-1)">Clients <span class="muted num" style="font-family:var(--font-body);font-size:1rem">'+S.clients.length+'</span></h2><button class="btn btn-primary" id="add">'+I.plus+'Add client</button></div>';
   if(S.clients.some(c=>c.example))h+='<div class="note"><p>These are example clients so you can see how it works. Remove them once you add your own.</p><div><button class="btn btn-ghost btn-sm" id="noex">Remove example clients</button></div></div>';
   h+='<div class="list">'+S.clients.map(c=>'<button class="client-row" style="--c:'+c.color+'" data-c="'+c.id+'"><span class="big-dot"></span><span class="who"><b>'+esc(c.name)+'</b><small>'+c.sessions+' a week · '+c.len+' min'+(c.spread?'':' · back to back is fine')+'</small></span>'+I.chev+'</button>').join('')+'</div>';
@@ -939,9 +1001,9 @@ function clientSheet(id){
     '<div class="stack"><label class="lbl" for="cn" style="font-weight:650">Name</label><input class="input" id="cn" value="'+esc(c.name)+'" placeholder="First name" autocomplete="off"></div>'+
     '<div class="stack"><span class="lbl" style="font-weight:650">Colour</span><div class="swatches">'+COLORS.map(k=>'<button class="sw" style="--c:'+k+'" data-col="'+k+'" aria-label="Colour" aria-pressed="'+(c.color===k)+'"></button>').join('')+'</div></div>'+
     '<div class="field-row"><span class="lbl">Sessions a week<span class="hint">You can change it week by week</span></span><div class="stepper"><button data-cs="-1" aria-label="Fewer">−</button><output class="num" id="csn">'+c.sessions+'</output><button data-cs="1" aria-label="More">+</button></div></div>'+
-    '<div class="field-row"><span class="lbl">Session length</span><div class="pills">'+[30,45,60,75,90].map(l=>'<button class="pill" data-len="'+l+'" aria-pressed="'+(c.len===l)+'">'+l+'</button>').join('')+'</div></div>'+
-    '<div class="field-row"><span class="lbl">Sessions in a pack</span><div class="pills">'+[5,10,20].map(l=>'<button class="pill" data-pk="'+l+'" aria-pressed="'+((c.pack||10)===l)+'">'+l+'</button>').join('')+'</div></div>'+
-    '<div class="field-row"><label for="cpr">Pack price<span class="hint">Optional, used in payment reminders</span></label><div class="row"><span class="muted">'+esc(S.trainer.cur||'AED')+'</span><input class="input num" id="cpr" inputmode="decimal" style="max-width:140px" value="'+(c.price!=null?c.price:'')+'" placeholder="0"></div></div>'+
+    '<div class="field-row col"><span class="lbl">Session length</span><div class="pills fill" style="--k:5">'+[30,45,60,75,90].map(l=>'<button class="pill" data-len="'+l+'" aria-pressed="'+(c.len===l)+'">'+l+'</button>').join('')+'</div></div>'+
+    '<div class="field-row col"><span class="lbl">Sessions in a pack</span><div class="pills fill" style="--k:3">'+[5,10,20].map(l=>'<button class="pill" data-pk="'+l+'" aria-pressed="'+((c.pack||10)===l)+'">'+l+'</button>').join('')+'</div></div>'+
+    '<div class="field-row"><label for="cpr">Pack price<span class="hint">Optional, used in payment reminders</span></label><div class="row"><span class="muted">'+esc(S.trainer.cur||'AED')+'</span><input class="input num" id="cpr" inputmode="decimal" style="width:110px" value="'+(c.price!=null?c.price:'')+'" placeholder="0"></div></div>'+
     '<div class="field-row"><span class="lbl">Spread across the week<span class="hint">Avoid back to back days where possible</span></span><label class="switch"><input type="checkbox" id="csp"'+(c.spread?' checked':'')+' aria-label="Spread across the week"><span></span></label></div>'+
     '<div class="row spread" style="padding-top:8px">'+(isNew?'<button class="btn btn-primary" id="cadd">Add client</button>':'<button class="btn btn-danger" id="cdel">Remove client</button><button class="btn btn-primary" data-close>Done</button>')+'</div>',
   r=>{
