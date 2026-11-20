@@ -263,6 +263,7 @@ dialog.sheet::backdrop{background:rgb(35 28 18 / .38)}
 .t-over,.t-due{background:var(--warn-bg);color:var(--warn)}
 .t-soon{background:#fbf0d6;color:#85570a}
 .t-ok{background:var(--accent-2);color:var(--accent)}
+.t-away{background:#e8eef6;color:#2f4f7a}
 .t-start{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)}
 .left{display:flex;align-items:baseline;gap:10px}
 .left b{font-family:var(--font-display);font-variation-settings:"SOFT" 100;font-size:2.6rem;line-height:1;font-weight:650;font-variant-numeric:tabular-nums}
@@ -366,6 +367,29 @@ dialog.sheet::backdrop{background:rgb(35 28 18 / .38)}
 .acc-b{padding:0 16px 16px;display:grid;gap:var(--s3)}
 .acc[open]>.acc-b{animation:accIn .28s var(--ease)}
 @keyframes accIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+.today .today-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.today h2{font-size:var(--t-2)}
+.today .tag{margin:4px 0 0}
+.sess.done{opacity:.55}
+.sess .lc{font-size:var(--t-xs);font-weight:700;color:var(--warn)}
+.drive{display:flex;align-items:center;gap:10px;padding:6px 12px;margin:-2px 0;color:var(--ink-2);font-size:var(--t-sm);font-weight:600}
+.drive svg{width:18px;height:18px;flex:none;color:var(--ink-3)}
+.drive small{font-weight:500;color:var(--ink-3);font-size:var(--t-xs)}
+.wsum{display:grid;gap:14px}
+.wsum-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.wsum-top>div{font-size:1.05rem}
+.wsum-top b{font-family:var(--font-display);font-variation-settings:"SOFT" 100;font-size:1.5rem}
+.wsum-top small{display:block;color:var(--ink-3);font-size:var(--t-sm);font-weight:600}
+.wsum .bar{max-width:none}
+button.tag{border:0;min-height:44px;padding:0 16px;font-size:var(--t-sm);cursor:pointer;margin:0}
+.intro{display:grid;gap:12px;border-color:color-mix(in srgb,var(--accent) 30%,var(--line))}
+.intro h2{font-size:var(--t-1)}
+.intro ol{margin:0;padding-left:22px;display:grid;gap:10px;color:var(--ink-2)}
+.intro ol b{color:var(--ink)}
+.intro .btn{justify-self:start}
+.tools{display:grid;grid-template-columns:repeat(var(--k),minmax(0,1fr));gap:8px}
+.tools .btn{padding:0 8px}
 .foot{text-align:center;color:var(--ink-3);font-size:var(--t-xs);padding:var(--s7) 0 var(--s4)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -398,7 +422,7 @@ dialog.sheet::backdrop{background:rgb(35 28 18 / .38)}
 <script>
 (function(){
 'use strict';
-const VERSION='v1.6';
+const VERSION='v1.7';
 const STAMP='20/11/2026';
 const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const DS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -481,9 +505,7 @@ let S=load();
   Object.keys(S.weeks).forEach(k=>{if(k>=now){const w=S.weeks[k];if(!w.avail.amir)w.avail.amir=amirU.slice();}});
   try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}
 })();
-const UI={view:(function(){try{return localStorage.getItem('ptweek.v1.view')||'cal';}catch(e){return 'cal';}})(),tab:'week',wk:keyOf(addDays(mondayOf(new Date()),7)),sel:'t',fresh:false};
-try{const t=localStorage.getItem(LS+'.tab');if(t)UI.tab=t;}catch(e){}
-if(!Object.keys(S.weeks).length||!S.weeks[UI.wk]){const ks=Object.keys(S.weeks).sort();const near=ks.filter(k=>k>=keyOf(mondayOf(new Date())))[0];if(near)UI.wk=near;}
+const UI={view:(function(){try{return localStorage.getItem('ptweek.v1.view')||'cal';}catch(e){return 'cal';}})(),tab:'week',wk:keyOf(addDays(mondayOf(new Date()),new Date().getDay()%6===0?7:0)),sel:'t',fresh:false};
 
 let saveT,flashT;
 function save(){
@@ -526,23 +548,44 @@ function W(k){
     S.clients.forEach(c=>{if(c.usual)avail[c.id]=c.usual.slice();});
     S.weeks[k]={avail,need:{},sched:[],built:false};
   }
+  S.weeks[k].k=k;
   return S.weeks[k];
 }
 const peek=k=>S.weeks[k||UI.wk];
 const live=wk=>wk.sched.filter(x=>x.st!=='cx');
+const tname=()=>(S.trainer.name||'Trainer')+' (Me)';
+/* drive times: S.travel["a|b"]=[offPeakMin,rushMin] */
+const tkey=(a,b)=>{a=String(a).trim().toLowerCase();b=String(b).trim().toLowerCase();return a<b?a+'|'+b:b+'|'+a;};
+const same=(a,b)=>String(a).trim().toLowerCase()===String(b).trim().toLowerCase();
+const locOf=id=>id==='home'?(S.trainer.home||''):((client(id)||{}).loc||'');
+function travel(la,lb,t){
+  if(!la||!lb)return null;if(same(la,lb))return 0;
+  const v=(S.travel||{})[tkey(la,lb)];const off=v?v[0]:25,peak=v?v[1]:40,h=t/60;
+  if((h>=7&&h<10)||(h>=16&&h<20))return peak;if(h<7)return Math.max(5,Math.round(off*.85/5)*5);return off;
+}
+function needGap(a,b,t){const B=+S.trainer.buffer||0,tv=travel(locOf(a),locOf(b),t);return tv==null?B:Math.max(B,tv);}
+function conflict(p,o){if(p.d!==o.d)return false;if(p.c===o.c)return true;if(p.s<=o.s)return o.s<p.e+needGap(p.c,o.c,p.e);return p.s<o.e+needGap(o.c,p.c,o.e);}
+const asE=x=>({c:x.c,d:x.d,s:x.s,e:x.s+x.len});
+/* holidays: client.away={from:'YYYY-MM-DD',to:'YYYY-MM-DD'} */
+function awayDays(c,k){const a=c&&c.away;if(!a||!a.from||!a.to||!k)return [];const o=[];for(let d=0;d<7;d++){const x=keyOf(dayDate(k,d));if(x>=a.from&&x<=a.to)o.push(d);}return o;}
+function awayNow(c,k){const ad=awayDays(c,k);return ad.length?ad:null;}
+const backOn=c=>{const d=addDays(fromKey(c.away.to),1);return DS[(d.getDay()+6)%7]+' '+dm(d);};
 const client=id=>S.clients.find(c=>c.id===id);
-const need=(wk,c)=>wk&&wk.need&&wk.need[c.id]!=null?wk.need[c.id]:c.sessions;
+const need=(wk,c)=>{const base=wk&&wk.need&&wk.need[c.id]!=null?wk.need[c.id]:c.sessions;if(wk&&wk.k&&c.away){const ad=awayDays(c,wk.k),work=[0,1,2,3,4,5,6].filter(d=>wk.avail.t&&wk.avail.t[d].includes('1'));if(work.length&&work.every(d=>ad.includes(d)))return 0;}return base;};
 const hasTimes=(wk,id)=>!!(wk&&wk.avail[id]&&wk.avail[id].some(m=>m.includes('1')));
 
 /* ---------- scheduler ---------- */
 function candidates(wk,c){
   const A=wk.avail[c.id]||blankWeek(),T=wk.avail.t||blankWeek(),o=[];
-  for(let d=0;d<7;d++)for(let s=0;s+c.len<=1440;s+=30)if(okR(A[d],s,s+c.len)&&okR(T[d],s,s+c.len))o.push({d,s,e:s+c.len});
+  const ad=awayDays(c,wk.k);
+  for(let d=0;d<7;d++){if(ad.includes(d))continue;for(let s=0;s+c.len<=1440;s+=15)if(okR(A[d],s,s+c.len)&&okR(T[d],s,s+c.len))o.push({d,s,e:s+c.len});}
   return o;
 }
-function clash(p,o,cid,B){return p.d===o.d&&(p.c===cid||(o.s<p.e+B&&p.s<o.e+B));}
 function solve(wk){
   const T=S.trainer,B=+T.buffer||0,maxD=+T.maxPerDay||99;
+  const gm={},band=t=>t<420?0:((t>=420&&t<600)||(t>=960&&t<1200))?1:2;
+  const gap=(a,b,t)=>{const k=a+'>'+b+'>'+band(t);return gm[k]!=null?gm[k]:(gm[k]=needGap(a,b,t));};
+  const clash=(p,o,cid)=>{if(p.d!==o.d)return false;if(p.c===cid)return true;if(p.s<=o.s)return o.s<p.e+gap(p.c,cid,p.e);return p.s<o.e+gap(cid,p.c,o.e);};
   const ids=new Set(S.clients.map(c=>c.id));
   const cand={},spread={};
   S.clients.forEach(c=>{cand[c.id]=candidates(wk,c);spread[c.id]=c.spread;});
@@ -551,7 +594,7 @@ function solve(wk){
   const demand=[];
   S.clients.forEach(c=>{const n=need(wk,c)-locked.filter(l=>l.c===c.id).length;for(let i=0;i<n;i++)demand.push(c.id);});
   const dayN=(P,d)=>{let n=0;for(const p of P)if(p.d===d)n++;return n;};
-  const feas=(cid,P)=>cand[cid].filter(o=>!P.some(p=>clash(p,o,cid,B))&&dayN(P,o.d)<maxD);
+  const feas=(cid,P)=>cand[cid].filter(o=>!P.some(p=>clash(p,o,cid))&&dayN(P,o.d)<maxD);
   function local(cid,o,P){
     let v=0;
     for(const p of P){
@@ -559,6 +602,7 @@ function solve(wk){
       if(p.c===cid&&spread[cid]&&Math.abs(p.d-o.d)===0)v-=100;
     }
     const same=P.filter(p=>p.d===o.d);
+    {const pr=same.filter(p=>p.e<=o.s).sort((a,b)=>b.e-a.e)[0],nx=same.filter(p=>p.s>=o.e).sort((a,b)=>a.s-b.s)[0];if(pr)v-=gap(pr.c,cid,pr.e)/4;else v-=gap('home',cid,o.s)/8;if(nx)v-=gap(cid,nx.c,o.e)/4;}
     if(same.length){let g=1e9;for(const p of same)g=Math.min(g,Math.abs(o.s-p.e-B),Math.abs(p.s-o.e-B));v-=Math.min(g,180)/30*2;}
     v-=same.length*3;
     return v;
@@ -567,7 +611,7 @@ function solve(wk){
     let v=P.length*1000;
     const by={};P.forEach(p=>(by[p.c]=by[p.c]||[]).push(p.d));
     for(const c in by){if(!spread[c])continue;const ds=by[c].sort();for(let i=1;i<ds.length;i++)if(ds[i]-ds[i-1]===1)v-=30;}
-    for(let d=0;d<7;d++){const L=P.filter(p=>p.d===d).sort((a,b)=>a.s-b.s);for(let i=1;i<L.length;i++){const g=L[i].s-L[i-1].e-B;v-=Math.min(Math.max(g,0),180)/30*2;}}
+    for(let d=0;d<7;d++){const L=P.filter(p=>p.d===d).sort((a,b)=>a.s-b.s);for(let i=1;i<L.length;i++){const tv=gap(L[i-1].c,L[i].c,L[i-1].e),g=L[i].s-L[i-1].e-tv;v-=Math.min(Math.max(g,0),180)/30*2+tv/4;}}
     const cnt=[0,0,0,0,0,0,0];P.forEach(p=>cnt[p.d]++);const used=cnt.filter(x=>x>0);const avg=used.reduce((a,b)=>a+b,0)/(used.length||1);used.forEach(x=>v-=(x-avg)*(x-avg)*2);
     return v;
   }
@@ -590,10 +634,10 @@ function solve(wk){
   for(let pass=0;pass<2&&miss.length;pass++){
     miss=miss.filter(cid=>{
       for(const o of cand[cid]){
-        const bl=P.filter(p=>clash(p,o,cid,B));
+        const bl=P.filter(p=>clash(p,o,cid));
         if(bl.length!==1||bl[0].fixed)continue;
         const b=bl[0],i=P.indexOf(b);P.splice(i,1);
-        if(dayN(P,o.d)<maxD&&!P.some(p=>clash(p,o,cid,B))){
+        if(dayN(P,o.d)<maxD&&!P.some(p=>clash(p,o,cid))){
           const n={c:cid,d:o.d,s:o.s,e:o.e};P.push(n);
           const F=feas(b.c,P);
           if(F.length){let pick=F[0],pv=-1e9;for(const f of F){const v=local(b.c,f,P);if(v>pv){pv=v;pick=f;}}P.push({c:b.c,d:pick.d,s:pick.s,e:pick.e});return false;}
@@ -608,13 +652,14 @@ function solve(wk){
 }
 function why(wk,c){
   if(!hasTimes(wk,c.id))return 'No times entered for '+c.name+' this week yet.';
+  {const ad=awayDays(c,wk.k);if(ad.length)return c.name+' is on holiday '+ad.map(d=>DS[d]).join(', ')+', so there are fewer days to fit them in.';}
   const cand=candidates(wk,c);
   if(!cand.length)return c.name+'’s times don’t overlap with yours this week. Ask for another time, or open up an hour on your side.';
   const B=+S.trainer.buffer||0,names=new Set();let full=false;
   const days=new Set(cand.map(o=>o.d));
   for(const o of cand){
     const n=live(wk).filter(p=>p.d===o.d).length;if(n>=S.trainer.maxPerDay)full=true;
-    live(wk).forEach(p=>{if(p.c!==c.id&&p.d===o.d&&o.s<p.s+p.len+B&&p.s<o.e+B){const x=client(p.c);if(x)names.add(x.name);}});
+    live(wk).forEach(p=>{if(p.c!==c.id&&conflict(asE(p),{c:c.id,d:o.d,s:o.s,e:o.e})){const x=client(p.c);if(x)names.add(x.name);}});
   }
   const when=[...days].map(d=>DS[d]).join(', ');
   const placed=live(wk).filter(p=>p.c===c.id).length;
@@ -629,7 +674,7 @@ function valid(wk,x){
   const A=wk.avail[c.id],T=wk.avail.t;
   if(!A||!okR(A[x.d],x.s,x.s+x.len)||!T||!okR(T[x.d],x.s,x.s+x.len))return false;
   const B=+S.trainer.buffer||0;
-  return !live(wk).some(p=>p!==x&&p.d===x.d&&(p.c===x.c||(x.s<p.s+p.len+B&&p.s<x.s+x.len+B)));
+  return !live(wk).some(p=>p!==x&&conflict(asE(p),asE(x)));
 }
 
 /* ---------- toast ---------- */
@@ -658,7 +703,7 @@ async function copyText(t){
 
 /* ---------- tabs ---------- */
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>go(b.dataset.tab)));
-function go(t,sel){UI.tab=t;if(sel)UI.sel=sel;try{localStorage.setItem(LS+'.tab',t);}catch(e){}render();window.scrollTo({top:0});}
+function go(t,sel){UI.tab=t;if(sel)UI.sel=sel;render();window.scrollTo({top:0});}
 function render(){
   document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===UI.tab)));
   ['week','times','clients','pay'].forEach(t=>$('#v-'+t).hidden=t!==UI.tab);
@@ -670,32 +715,68 @@ function weekBar(){
 function bindWeekBar(root){root.querySelectorAll('[data-wk]').forEach(b=>b.addEventListener('click',()=>{UI.wk=keyOf(addDays(fromKey(UI.wk),7*+b.dataset.wk));UI.fresh=false;render();}));}
 
 /* ---------- WEEK ---------- */
+function todayCard(){
+  const now=new Date(),tk=keyOf(mondayOf(now)),wk=S.weeks[tk];const d=(now.getDay()+6)%7;
+  const nowM=now.getHours()*60+now.getMinutes();
+  let L=wk?live(wk).filter(x=>x.d===d&&client(x.c)).sort((a,b)=>a.s-b.s):[];
+  let h='<div class="card today"><div class="today-h"><div><p class="eyebrow">Today</p><h2>'+DAYS[d]+' '+now.getDate()+' '+MONTHS[now.getMonth()]+'</h2></div>';
+  const left=L.filter(x=>x.s+x.len>nowM);
+  h+='<span class="tag '+(left.length?'t-ok':'t-start')+'">'+(L.length?(left.length?left.length+' to go':'All done'):'Day off')+'</span></div>';
+  if(!L.length){
+    let nx=null;for(let i=1;i<=14&&!nx;i++){const dt=addDays(now,i),w=S.weeks[keyOf(mondayOf(dt))],dd=(dt.getDay()+6)%7;if(w){const f=live(w).filter(x=>x.d===dd&&client(x.c)).sort((a,b)=>a.s-b.s)[0];if(f)nx={dt,x:f};}}
+    h+='<p class="muted">Nothing booked today.'+(nx?' Next: <b>'+DAYS[(nx.dt.getDay()+6)%7]+' '+nx.dt.getDate()+' '+MONTHS[nx.dt.getMonth()]+'</b>, '+fmt(nx.x.s)+' with '+esc(client(nx.x.c).name)+'.':'')+'</p>';
+    return h+'</div>';
+  }
+  h+='<div class="sessions">';
+  if(S.trainer.home){const m=travel(S.trainer.home,locOf(L[0].c),L[0].s);if(m)h+='<div class="drive">'+CAR+'<span>Leave '+esc(S.trainer.home)+' by <b>'+fmt(L[0].s-m)+'</b><small> · '+m+' min drive</small></span></div>';}
+  L.forEach((x,i)=>{const c=client(x.c),done=x.s+x.len<=nowM;
+    if(i)h+=driveRow(locOf(L[i-1].c),locOf(x.c),L[i-1].s+L[i-1].len,x.s);
+    h+='<button class="sess'+(done?' done':'')+'" style="--c:'+c.color+'" data-today="'+x.id+'"><span class="time">'+fmt(x.s)+'</span><span class="who"><b>'+esc(c.name)+'</b><small>'+(c.loc?esc(c.loc)+' · ':'')+(done?'Done':'until '+fmt(x.s+x.len))+'</small></span>'+(x.st==='late'?'<small class="lc">Late cancel</small>':'')+'</button>';});
+  h+='</div>';
+  const dr=dayDrive(L);if(dr)h+='<p class="small muted" style="margin-top:12px">About '+hm(dr)+' of driving today, home and back.</p>';
+  return h+'</div>';
+}
+function introCard(){
+  if(S.introDone)return '';
+  return '<div class="card intro"><h2>How it works</h2><ol>'+
+    '<li><b>Add your clients</b> once, with where they live and how often they train.</li>'+
+    '<li><b>Each week, paste their messages</b> (or type their times). The planner fits everyone in around you and the drive between them.</li>'+
+    '<li><b>Check the week and send each client their times.</b> Tap any session to move, lock or cancel it.</li></ol>'+
+    '<button class="btn btn-primary" id="introok">Got it</button></div>';
+}
+function issuesSheet(){
+  const wk=W(),sched=live(wk).filter(x=>client(x.c));
+  const short=S.clients.filter(c=>need(wk,c)>sched.filter(x=>x.c===c.id).length);
+  const noT=short.filter(c=>!hasTimes(wk,c.id));
+  let h='';
+  if(noT.length)h+='<div class="issue"><div class="issue-top">No times yet</div><p>'+noT.map(c=>esc(c.name)).join(', ')+'</p><div class="two"><button class="btn btn-ghost btn-sm" data-times="'+noT[0].id+'">Add times</button>'+(aiOn()?'<button class="btn btn-ghost btn-sm" data-paste>Paste messages</button>':'<span></span>')+'</div></div>';
+  short.filter(c=>hasTimes(wk,c.id)).forEach(c=>{const p=sched.filter(x=>x.c===c.id).length,n=need(wk,c);
+    h+='<div class="issue" style="--c:'+c.color+'"><div class="issue-top"><span class="dot"></span>'+esc(c.name)+' <span class="muted small" style="font-weight:600">'+p+' of '+n+' booked</span></div><p>'+esc(why(wk,c))+'</p><div class="two"><button class="btn btn-ghost btn-sm" data-times="'+c.id+'">Change times</button><button class="btn btn-ghost btn-sm" data-fewer="'+c.id+'">'+(p?'Book '+p+' this week':'Skip this week')+'</button></div></div>';});
+  openSheet(sheetHead('Needs a look','Sessions that couldn’t be fitted this week.')+'<div class="stack">'+h+'</div>',r=>{
+    r.querySelectorAll('[data-times]').forEach(b=>b.addEventListener('click',()=>{closeSheet();go('times',b.dataset.times);}));
+    r.querySelectorAll('[data-paste]').forEach(b=>b.addEventListener('click',pasteSheet));
+    r.querySelectorAll('[data-fewer]').forEach(b=>b.addEventListener('click',()=>{const w=W(),c=client(b.dataset.fewer);w.need[c.id]=live(w).filter(x=>x.c===c.id).length;save();closeSheet();renderWeek();toast(c.name+' set to '+w.need[c.id]+' this week');}));
+  });
+}
 function renderWeek(){
   const v=$('#v-week'),wk=W(),T=S.trainer;
   if(!wk.built&&!wk.sched.length&&S.clients.some(c=>need(wk,c)>0&&hasTimes(wk,c.id))){wk.sched=solve(wk);wk.built=true;UI.fresh=true;save();}
   const total=S.clients.reduce((a,c)=>a+need(wk,c),0);
   const all=wk.sched.filter(x=>client(x.c)),sched=all.filter(x=>x.st!=='cx');
-  const withTimes=S.clients.filter(c=>need(wk,c)>0&&hasTimes(wk,c.id)).length;
-  const active=S.clients.filter(c=>need(wk,c)>0).length;
   const short=S.clients.filter(c=>need(wk,c)>sched.filter(x=>x.c===c.id).length);
-  let title,body;
-  if(!S.clients.length){title='Add your clients first';body='Then put in this week’s times for everyone and the planner fits them around you.';}
-  else if(!wk.built&&!sched.length){title='Ready when the times are in';body=withTimes+' of '+active+' clients have times for this week. Build it now or add the rest first.';}
-  else if(!short.length){title='All '+total+' sessions are in';body='Tap any session to lock it or move it. Locked sessions stay put when you rebuild.';}
-  else{title=sched.length+' of '+total+' sessions are in';body=short.length+' client'+(short.length>1?'s need':' needs')+' a look below.';}
-  let meter='';S.clients.forEach(c=>{const n=need(wk,c),p=Math.min(n,sched.filter(x=>x.c===c.id).length);for(let i=0;i<n;i++)meter+='<i style="--c:'+c.color+'"'+(i<p?' class="on"':'')+'></i>';});
-  let h=weekBar();
-  h+='<div class="card status"><h2>'+esc(title)+'</h2><p class="muted">'+esc(body)+'</p>'+(total?'<div class="bar" aria-hidden="true"><i style="width:'+Math.round(Math.min(sched.length,total)/total*100)+'%"></i></div>':'')+
-     (aiOn()?'<div class="status-acts" style="grid-template-columns:minmax(0,1fr)"><button class="btn btn-soft btn-big" id="pastew">'+I.spark+'Paste their messages</button></div>':'')+'<div class="actions status-acts"><button class="btn btn-primary btn-big" id="build"'+(S.clients.length?'':' disabled')+'>'+I.spark+(wk.built||sched.length?'Rebuild the week':'Build the week')+'</button>'+
-     (sched.length?'<button class="btn btn-ghost btn-big" id="share">'+I.msg+'Send times</button>':'')+'</div></div>';
-  if((wk.built||sched.length)&&short.length){
-    h+='<div class="issues"><h3>Needs a look</h3>';
-    const noT=short.filter(c=>!hasTimes(wk,c.id));
-    if(noT.length>1)h+='<div class="issue"><div class="issue-top">No times yet for '+noT.length+' clients</div><p>'+noT.map(c=>esc(c.name)).join(', ')+'</p><div class="two"><button class="btn btn-ghost btn-sm" data-times="'+noT[0].id+'">Add times</button>'+(aiOn()?'<button class="btn btn-ghost btn-sm" data-paste>Paste messages</button>':'<span></span>')+'</div></div>';
-    short.filter(c=>noT.length<2||hasTimes(wk,c.id)).forEach(c=>{const p=sched.filter(x=>x.c===c.id).length,n=need(wk,c);
-      h+='<div class="issue" style="--c:'+c.color+'"><div class="issue-top"><span class="dot"></span>'+esc(c.name)+' <span class="muted small" style="font-weight:600">'+p+' of '+n+' placed</span></div><p>'+esc(why(wk,c))+'</p><div class="two"><button class="btn btn-ghost btn-sm" data-times="'+c.id+'">Change times</button><button class="btn btn-ghost btn-sm" data-fewer="'+c.id+'">'+(p?'Book '+p+' this week':'Skip this week')+'</button></div></div>';});
-    h+='</div>';
-  }
+  const missing=short.reduce((a,c)=>a+need(wk,c)-sched.filter(x=>x.c===c.id).length,0);
+  const thisWeek=UI.wk===keyOf(mondayOf(new Date()));
+  let h=introCard();
+  if(thisWeek)h+=todayCard();
+  h+=weekBar();
+  let drive=0;for(let d=0;d<7;d++)drive+=dayDrive(sched.filter(x=>x.d===d).sort((a,b)=>a.s-b.s));
+  const away=S.clients.filter(c=>awayDays(c,UI.wk).some(d=>wk.avail.t&&wk.avail.t[d].includes('1')));
+  h+='<div class="card wsum"><div class="wsum-top"><div><b class="num">'+sched.length+' of '+total+'</b> sessions booked'+(drive?'<small>About '+hm(drive)+' driving</small>':'')+'</div>'+
+     (missing?'<button class="tag t-due" id="issues">'+missing+' to sort</button>':(sched.length?'<span class="tag t-ok">All in</span>':''))+'</div>'+
+     (total?'<div class="bar" aria-hidden="true"><i style="width:'+Math.round(Math.min(sched.length,total)/total*100)+'%"></i></div>':'')+
+     (away.length?'<p class="small muted">On holiday: '+away.map(c=>'<b>'+esc(c.name)+'</b> (back '+backOn(c)+')').join(', ')+'</p>':'')+
+     (aiOn()?'<button class="btn btn-primary btn-big" id="pastew" style="width:100%">'+I.spark+'Paste this week’s messages</button>':'')+
+     '<div class="two"><button class="btn btn-ghost" id="build"'+(S.clients.length?'':' disabled')+'>Rebuild week</button><button class="btn btn-ghost" id="share"'+(sched.length?'':' disabled')+'>'+I.msg+'Send times</button></div></div>';
   const anyTimes=S.clients.some(c=>hasTimes(wk,c.id));
   if(sched.length||anyTimes){
     const vw=UI.view||'cal';
@@ -704,25 +785,22 @@ function renderWeek(){
     else if(vw==='list')h+=agenda(wk,all);
     else h+=calendar(wk,all,false);
   }
-  if(sched.length){
-    h+='<div class="legend">';S.clients.filter(c=>need(wk,c)>0).forEach(c=>{const p=sched.filter(x=>x.c===c.id).length,n=need(wk,c);h+='<span class="chip'+(p<n?' short':'')+'" style="--c:'+c.color+'"><span class="dot"></span>'+esc(c.name)+' <span class="cnt num">'+p+'/'+n+'</span></span>';});h+='</div>';
-  }
   v.innerHTML=h;v.classList.toggle('fresh',UI.fresh);UI.fresh=false;
   bindWeekBar(v);
+  const io=$('#introok',v);if(io)io.addEventListener('click',()=>{S.introDone=true;save();renderWeek();});
+  const is=$('#issues',v);if(is)is.addEventListener('click',issuesSheet);
   const bb=$('#build',v);if(bb)bb.addEventListener('click',()=>{
-    bb.setAttribute('aria-busy','true');bb.lastChild.textContent=' Working it out…';
+    bb.setAttribute('aria-busy','true');bb.textContent='Working it out…';
     setTimeout(()=>{const w=W();w.sched=solve(w);w.built=true;save();UI.fresh=true;renderWeek();
       const miss=S.clients.reduce((a,c)=>a+Math.max(0,need(w,c)-live(w).filter(x=>x.c===c.id).length),0);
-      toast(miss?'Built, '+miss+' session'+(miss>1?'s':'')+' couldn’t fit':'Week built, everyone fits');},60);
+      toast(miss?'Rebuilt, '+miss+' still to sort':'Rebuilt, everyone fits');},60);
   });
   const sb=$('#share',v);if(sb)sb.addEventListener('click',shareSheet);
-  v.querySelectorAll('[data-times]').forEach(b=>b.addEventListener('click',()=>go('times',b.dataset.times)));
-  v.querySelectorAll('[data-fewer]').forEach(b=>b.addEventListener('click',()=>{const w=W(),c=client(b.dataset.fewer);w.need[c.id]=live(w).filter(x=>x.c===c.id).length;save();renderWeek();toast(c.name+' set to '+w.need[c.id]+' this week');}));
   v.querySelectorAll('[data-s]').forEach(b=>b.addEventListener('click',()=>sessionSheet(b.dataset.s)));
+  v.querySelectorAll('[data-today]').forEach(b=>b.addEventListener('click',()=>{UI.wk=keyOf(mondayOf(new Date()));sessionSheet(b.dataset.today);}));
   v.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{UI.view=b.dataset.view;try{localStorage.setItem(LS+'.view',UI.view);}catch(e){}renderWeek();}));
   v.querySelectorAll('[data-fd]').forEach(b=>b.addEventListener('click',()=>freeSheet(+b.dataset.fd,+b.dataset.fh)));
   const pw=$('#pastew',v);if(pw)pw.addEventListener('click',pasteSheet);
-  v.querySelectorAll('[data-paste]').forEach(b=>b.addEventListener('click',pasteSheet));
   v.querySelectorAll('[data-jump]').forEach(b=>b.addEventListener('click',()=>{const el=document.getElementById('day-'+b.dataset.jump);if(el)el.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});}));
 }
 function workDays(wk,sched){const o=[];for(let d=0;d<7;d++)if((wk.avail.t&&wk.avail.t[d].includes('1'))||sched.some(x=>x.d===d))o.push(d);return o;}
@@ -734,7 +812,9 @@ function agenda(wk,sched){
     const nL=L.filter(x=>x.st!=='cx').length;
     h+='<div class="day" id="day-'+d+'"><div class="day-h"><h3>'+DAYS[d]+' '+dt.getDate()+' '+MONTHS[dt.getMonth()]+'</h3><span>'+(nL?nL+' session'+(nL>1?'s':''):'')+'</span></div><div class="sessions">';
     if(!L.length)h+='<p class="free">Nothing booked</p>';
-    L.forEach(x=>{const c=client(x.c);h+='<button class="sess'+(valid(wk,x)?'':' bad')+(x.st?' st-'+x.st:'')+'" style="--c:'+c.color+';--i:'+(i++)+'" data-s="'+x.id+'"><span class="time">'+fmt(x.s)+'</span><span class="who"><b>'+esc(c.name)+'</b><small class="num">'+(x.st==='cx'?'Cancelled, not charged':x.st==='late'?'Late cancel, charged':'until '+fmt(x.s+x.len))+(valid(wk,x)?'':' · check this one')+'</small></span>'+(x.lock?LOCK:'')+'</button>';});
+    if(L.length&&S.trainer.home){const f=L.find(x=>x.st!=='cx');if(f){const m=travel(S.trainer.home,locOf(f.c),f.s);if(m)h+='<div class="drive">'+CAR+'<span>Leave '+esc(S.trainer.home)+' by '+fmt(f.s-m)+'<small> · '+m+' min drive</small></span></div>';}}
+    let prevX=null;
+    L.forEach(x=>{const c=client(x.c);if(prevX&&x.st!=='cx'){h+=driveRow(locOf(prevX.c),locOf(x.c),prevX.s+prevX.len,x.s);}if(x.st!=='cx')prevX=x;h+='<button class="sess'+(valid(wk,x)?'':' bad')+(x.st?' st-'+x.st:'')+'" style="--c:'+c.color+';--i:'+(i++)+'" data-s="'+x.id+'"><span class="time">'+fmt(x.s)+'</span><span class="who"><b>'+esc(c.name)+'</b><small class="num">'+(c.loc&&!x.st?esc(c.loc)+' · ':'')+(x.st==='cx'?'Cancelled, not charged':x.st==='late'?'Late cancel, charged':'until '+fmt(x.s+x.len))+(valid(wk,x)?'':' · check this one')+'</small></span>'+(x.lock?LOCK:'')+'</button>';});
     h+='</div></div>';
   });
   return h+'</div>';
@@ -777,11 +857,12 @@ function sessionSheet(id){
   const wk=W(),x=wk.sched.find(s=>s.id===id);if(!x)return;const c=client(x.c);const dt=dayDate(UI.wk,x.d);
   const B=+S.trainer.buffer||0,maxD=+S.trainer.maxPerDay||99;
   const others=live(wk).filter(p=>p!==x);
-  const alts=candidates(wk,c).filter(o=>!(o.d===x.d&&o.s===x.s)&&!others.some(p=>p.d===o.d&&(p.c===c.id||(o.s<p.s+p.len+B&&p.s<o.e+B)))&&others.filter(p=>p.d===o.d).length<maxD);
+  const alts=candidates(wk,c).filter(o=>!(o.d===x.d&&o.s===x.s)&&!others.some(p=>conflict(asE(p),{c:c.id,d:o.d,s:o.s,e:o.e}))&&others.filter(p=>p.d===o.d).length<maxD);
   let slots='';
   for(let d=0;d<7;d++){const L=alts.filter(o=>o.d===d);if(!L.length)continue;slots+='<div class="slot-day"><b>'+DS[d]+'</b><div class="pills">'+L.map(o=>'<button class="pill" data-mv="'+o.d+','+o.s+'">'+fmt(o.s)+'</button>').join('')+'</div></div>';}
   const bad=!valid(wk,x);
   openSheet(sheetHead('<span style="color:'+c.color+'">●</span> '+esc(c.name),DAYS[x.d]+' '+dt.getDate()+' '+MONTHS[dt.getMonth()]+', '+fmt(x.s)+' to '+fmt(x.s+x.len))+
+    (function(){const L=live(wk).filter(p=>p.d===x.d&&p!==x).sort((a,b)=>a.s-b.s);const pr=L.filter(p=>p.s<x.s).pop();const from=pr?locOf(pr.c):S.trainer.home;const m=travel(from,c.loc,pr?pr.s+pr.len:x.s);return m?'<div class="drive" style="margin:0">'+CAR+'<span>'+m+' min drive from '+esc(from)+', leave by '+fmt(x.s-m)+(c.loc?'<small> · '+esc(c.loc)+'</small>':'')+'</span></div>':'';})()+
     (bad?'<div class="issues" style="padding:16px"><p style="color:var(--warn);font-weight:600">This time no longer matches '+esc(c.name)+'’s times or yours, or it overlaps someone. Move it or rebuild.</p></div>':'')+
     '<div class="stack"><p class="eyebrow">This session</p><div class="pills fill" style="--k:3">'+[['','Booked'],['cx','Cancelled'],['late','Late cancel']].map(([k,l])=>'<button class="pill" data-st="'+k+'" aria-pressed="'+((x.st||'')===k)+'">'+l+'</button>').join('')+'</div><p class="small muted">Cancelled: not charged, doesn’t count towards their pack. Late cancel: charged, counts.</p></div>'+
     '<div class="field-row"><span class="lbl">Lock this time<span class="hint">A rebuild keeps locked sessions where they are.</span></span><label class="switch"><input type="checkbox" id="lk"'+(x.lock?' checked':'')+' aria-label="Lock this time"><span></span></label></div>'+
@@ -822,20 +903,21 @@ function renderTimes(){
   let h=weekBar();
   const order=['t'].concat(S.clients.map(x=>x.id)),ix=order.indexOf(UI.sel);
   const done=S.clients.filter(x=>need(wk,x)>0&&hasTimes(wk,x.id)).length,act=S.clients.filter(x=>need(wk,x)>0).length;
-  h+='<div class="switcher" style="--c:'+col+'"><button class="icon-btn" data-p="'+order[(ix-1+order.length)%order.length]+'" aria-label="Previous person">'+I.left+'</button><button class="sw-name" id="pick" aria-label="Choose who"><span class="dot"></span><b>'+esc(isT?(T.name||'Trainer'):c.name)+'</b>'+I.down+'</button><button class="icon-btn" data-p="'+order[(ix+1)%order.length]+'" aria-label="Next person">'+I.right+'</button></div>';
+  h+='<div class="switcher" style="--c:'+col+'"><button class="icon-btn" data-p="'+order[(ix-1+order.length)%order.length]+'" aria-label="Previous person">'+I.left+'</button><button class="sw-name" id="pick" aria-label="Choose who"><span class="dot"></span><b>'+esc(isT?tname():c.name)+'</b>'+I.down+'</button><button class="icon-btn" data-p="'+order[(ix+1)%order.length]+'" aria-label="Next person">'+I.right+'</button></div>';
   h+='<p class="sw-sub">'+done+' of '+act+' clients have times this week</p>';
   if(aiOn()||(prev&&missing.length))h+='<div class="actions">'+(aiOn()?'<button class="btn btn-soft" id="paste">'+I.spark+'Paste their messages</button>':'')+(prev&&missing.length?'<button class="btn btn-ghost" id="copyall">'+I.copy+'Copy last week for '+missing.length+' missing</button>':'')+'</div>';
   h+='<div class="card who-card" style="--c:'+col+'">';
   if(isT){
     h+='<p class="small muted">Your hours this week. Clients can only be booked inside them.</p>';
   }else{
-    const n=need(wk,c);
+    const n=need(wk,c);const ad=awayDays(c,wk.k);
+    if(ad.length)h+='<div class="note" style="background:#fbf0d6;color:#6b4708"><p><b>'+esc(c.name)+' is on holiday</b> '+(ad.length>=5?'this week':ad.map(d=>DS[d]).join(', '))+', back '+backOn(c)+'. Nothing is booked on those days.</p></div>';
     h+='<div class="field-row" style="border-top:0;padding-top:0"><span class="lbl">Sessions this week<span class="hint">'+(n===0?'Not training this week':'Usually '+c.sessions+' · '+c.len+' min each')+'</span></span><div class="stepper"><button data-n="-1" aria-label="One fewer">−</button><output class="num">'+n+'</output><button data-n="1" aria-label="One more">+</button></div></div>';
   }
-  h+='<div class="row spread"><p class="small muted">Type the times below, or drag on the grid.</p><div class="row">'+
-     '<button class="btn btn-ghost btn-sm" id="same"'+(prev&&(isT?prev.avail.t:prev.avail[c.id])?'':' disabled')+'>Same as last week</button>'+
-     (isT?'<button class="btn btn-ghost btn-sm" id="usual">Use my usual week</button>':'')+
-     '<button class="btn btn-ghost btn-sm" id="clr">Clear</button></div></div>';
+  h+='<div class="tools" style="--k:'+(isT||c.usual?3:2)+'">'+
+     '<button class="btn btn-ghost btn-sm" id="same"'+(prev&&(isT?prev.avail.t:prev.avail[c.id])?'':' disabled')+'>Last week</button>'+
+     (isT?'<button class="btn btn-ghost btn-sm" id="usual">Usual week</button>':(c.usual?'<button class="btn btn-ghost btn-sm" id="cusual2">Usual times</button>':''))+
+     '<button class="btn btn-ghost btn-sm" id="clr">Clear</button></div>';
   const qd=UI.qd||[0,1,2,3,4],qf=UI.qf!=null?UI.qf:T.start*60,qt=UI.qt!=null?UI.qt:Math.min(T.end*60,qf+60);
   const topts=(sel,a,b)=>{let o='';for(let m=a;m<=b;m+=30)o+='<option value="'+m+'"'+(m===sel?' selected':'')+'>'+fmt(m)+'</option>';return o;};
   h+='<div class="quick" style="--c:'+col+'"><div class="daypick" role="group" aria-label="Days">'+DS.map((n,d)=>'<button data-qd="'+d+'" aria-pressed="'+qd.includes(d)+'">'+n+'</button>').join('')+'</div>'+
@@ -858,6 +940,7 @@ function renderTimes(){
   const setMask=w=>{wk.avail[key]=w;save();renderTimes();};
   $('#clr',v).addEventListener('click',()=>{const u=snapshot();setMask(blankWeek());toast('Cleared',u);});
   const sm=$('#same',v);if(sm)sm.addEventListener('click',()=>{const m=isT?prev.avail.t:prev.avail[c.id];if(m){setMask(m.slice());if(!isT&&prev.need&&prev.need[c.id]!=null)wk.need[c.id]=prev.need[c.id];save();toast('Copied from last week');}});
+  const cu2=$('#cusual2',v);if(cu2)cu2.addEventListener('click',()=>{wk.avail[c.id]=c.usual.slice();save();renderTimes();toast(c.name+'’s usual times are in');});
   const us=$('#usual',v);if(us)us.addEventListener('click',()=>{setMask((T.usual||blankWeek()).slice());toast('Your usual week is in');});
   const cu=$('#cusual',v);if(cu)cu.addEventListener('click',()=>{c.usual=wk.avail[c.id]?wk.avail[c.id].slice():blankWeek();save();renderTimes();toast('Saved as '+c.name+'’s usual times');});
   const su=$('#saveusual',v);if(su)su.addEventListener('click',()=>{T.usual=wk.avail.t.slice();save();toast('Saved as your usual week');});
@@ -882,7 +965,7 @@ function renderTimes(){
 function pickSheet(){
   const wk=W(),T=S.trainer;
   const row=(id,name,col,note)=>'<button class="pick-row" style="--c:'+col+'" aria-pressed="'+(UI.sel===id)+'" data-pk="'+id+'"><span class="big-dot"></span><b>'+esc(name)+'</b><small>'+note+'</small></button>';
-  openSheet(sheetHead('Whose times?')+'<div class="list">'+row('t',T.name||'Trainer','#2f5d46','Your hours')+
+  openSheet(sheetHead('Whose times?')+'<div class="list">'+row('t',tname(),'#2f5d46','Your hours')+
     S.clients.map(x=>row(x.id,x.name,x.color,need(wk,x)===0?'Not this week':hasTimes(wk,x.id)?'Times in':'<span style="color:var(--warn)">No times yet</span>')).join('')+'</div>',
   r=>r.querySelectorAll('[data-pk]').forEach(b=>b.addEventListener('click',()=>{UI.sel=b.dataset.pk;closeSheet();renderTimes();})));
 }
@@ -980,6 +1063,25 @@ async function readMessages(r){
   });
 }
 
+/* ---------- DRIVE TIMES ---------- */
+let travelBusy=false;
+async function ensureTravel(){
+  const places=[S.trainer.home].concat(S.clients.map(c=>c.loc)).filter(Boolean);
+  const uniq=[];places.forEach(p=>{if(!uniq.some(u=>same(u,p)))uniq.push(p);});
+  const pairs=[];for(let i=0;i<uniq.length;i++)for(let j=i+1;j<uniq.length;j++)if(!(S.travel||{})[tkey(uniq[i],uniq[j])])pairs.push([uniq[i],uniq[j]]);
+  if(!pairs.length||!SERVER_AI||travelBusy)return;
+  travelBusy=true;
+  try{
+    const res=await fetch('/api/travel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pairs:pairs.slice(0,60)})});
+    if(res.ok){const d=await res.json();S.travel=S.travel||{};(d.pairs||[]).forEach(p=>{S.travel[tkey(p.a,p.b)]=[p.off,p.peak];});save();toast('Drive times updated');if(UI.tab==='week')renderWeek();}
+  }catch(e){}
+  travelBusy=false;
+}
+function dayDrive(L){let t=0;if(!L.length)return 0;const h=travel(S.trainer.home,locOf(L[0].c),L[0].s);t+=h||0;for(let i=1;i<L.length;i++)t+=travel(locOf(L[i-1].c),locOf(L[i].c),L[i-1].s+L[i-1].len)||0;const b=travel(locOf(L[L.length-1].c),S.trainer.home,L[L.length-1].s+L[L.length-1].len);return t+(b||0);}
+const hm=m=>m>=60?Math.floor(m/60)+' h'+(m%60?' '+(m%60)+' min':''):m+' min';
+const CAR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16h14M6 16l1.5-5.5A2 2 0 0 1 9.4 9h5.2a2 2 0 0 1 1.9 1.5L18 16"/><path d="M4 16v3h3v-3M17 16v3h3v-3"/></svg>';
+function driveRow(from,to,t,next){let m=travel(from,to,t);if(m==null)return '';if(next!=null&&next-t-m>=60){m=travel(from,to,next-45)||m;return '<div class="drive">'+CAR+'<span>Break, leave by <b>'+fmt(next-m)+'</b><small> · '+m+' min to '+esc(to)+'</small></span></div>';}if(m===0)return '';return '<div class="drive">'+CAR+'<span>Drive '+m+' min<small> · '+esc(from)+' to '+esc(to)+'</small></span></div>';}
+
 /* ---------- PAYMENTS ---------- */
 const dmy=d=>pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear();
 const dayName=d=>DS[(d.getDay()+6)%7]+' '+dm(d);
@@ -999,17 +1101,19 @@ function usage(c){
   else if(up.length>=left){lastPaid=up[left-1];firstUnpaid=up[left]||null;}
   else{const rem=left-up.length,base=up.length?up[up.length-1]:now,per=Math.max(1,+c.sessions||1);lastPaid=addDays(base,Math.max(1,Math.round(rem/per*7)));est=true;}
   let st;
-  if(!pays.length)st='start';else if(left<0)st='over';else if(left===0)st='due';else if(left<=2)st='soon';else st='ok';
+  const away=c.away&&c.away.to>=keyOf(now)&&c.away.from<=keyOf(now);
+  if(away)st='away';else if(!pays.length)st='start';else if(left<0)st='over';else if(left===0)st='due';else if(left<=2)st='soon';else st='ok';
   return {used,late,cx,up,hist,pays,paid,left,lastPaid,firstUnpaid,est,st};
 }
-const ORDER={over:0,due:1,soon:2,start:3,ok:4};
+const ORDER={over:0,due:1,soon:2,start:3,ok:4,away:5};
 function payLine(c,u){
+  if(u.st==='away')return '<b>Away until '+dm(fromKey(c.away.to))+'.</b> '+Math.max(u.left,0)+' session'+(u.left===1?'':'s')+' left on the pack, paused while they’re away.';
   if(u.st==='start')return 'No payments added yet. Add what '+esc(c.name)+' has paid, or what’s left on their current pack.';
   if(u.st==='over')return '<b>Owes for '+(-u.left)+' session'+(u.left<-1?'s':'')+'.</b>'+(u.up[0]?' Next one is '+dayName(u.up[0])+'.':'');
   if(u.st==='due')return '<b>Pack used up.</b>'+(u.firstUnpaid?' Payment due before '+dayName(u.firstUnpaid)+' at '+fmt(u.firstUnpaid.getHours()*60+u.firstUnpaid.getMinutes())+'.':' Payment due before the next session.');
   return 'Last paid session '+(u.est?'around ':'')+'<b>'+(u.est?dayName(u.lastPaid):dayName(u.lastPaid))+'</b>'+(u.est?', going by '+c.sessions+' a week':'')+'.';
 }
-function tagText(u){return {over:'Overdue',due:'Payment due',soon:'Due soon',ok:'Paid up',start:'Add payment'}[u.st];}
+function tagText(u){return {over:'Overdue',due:'Payment due',soon:'Due soon',ok:'Paid up',start:'Add payment',away:'On holiday'}[u.st];}
 function reminderText(c,u){
   const pk=c.pack||10,pr=c.price!=null?' The next '+pk+' are '+money(c.price)+'.':'';
   if(u.st==='over'||u.st==='due')return 'Hi '+c.name+', your '+pk+'-session pack is used up'+(u.left<0?' and '+(-u.left)+' more session'+(u.left<-1?'s have':' has')+' happened since':'')+'. Could you renew before your next session?'+pr+' Thank you!';
@@ -1031,7 +1135,7 @@ function renderPay(){
       '<p class="pay-when">'+payLine(c,u)+'</p>'+
       '<div class="pay-acts"><button class="btn btn-primary btn-sm" data-paid="'+c.id+'">Paid for '+pk+(c.price!=null?' · '+money(c.price):'')+'</button>'+
       (u.st==='start'?'<button class="btn btn-ghost btn-sm" data-hist="'+c.id+'">Set up</button>':
-      (u.st!=='ok'?'<button class="icon-btn" data-rem="'+c.id+'" aria-label="Copy payment reminder">'+I.msg+'</button>':'')+'<button class="icon-btn" data-hist="'+c.id+'" aria-label="History and add payment">'+I.list+'</button>')+'</div></div>';
+      (u.st!=='ok'&&u.st!=='away'?'<button class="icon-btn" data-rem="'+c.id+'" aria-label="Copy payment reminder">'+I.msg+'</button>':'')+'<button class="icon-btn" data-hist="'+c.id+'" aria-label="History and add payment">'+I.list+'</button>')+'</div></div>';
   });
   h+='</div>';
   v.innerHTML=h;
@@ -1065,8 +1169,9 @@ function renderClients(){
   const v=$('#v-clients'),T=S.trainer;
   UI.acc=UI.acc||{};
   const tsum=pad(T.start)+':00 to '+pad(T.end)+':00 · max '+T.maxPerDay+' a day'+(+T.buffer?' · '+T.buffer+' min gap':'');
-  let h='<details class="acc" data-acc="trainer"'+(UI.acc.trainer?' open':'')+' style="--c:#2f5d46"><summary><span class="big-dot"></span><span class="acc-t"><b>'+esc(T.name||'Trainer')+' · trainer</b><small>'+tsum+'</small></span>'+I.down+'</summary><div class="acc-b">'+
+  let h='<details class="acc" data-acc="trainer"'+(UI.acc.trainer?' open':'')+' style="--c:#2f5d46"><summary><span class="big-dot"></span><span class="acc-t"><b>'+esc(tname())+'</b><small>'+tsum+'</small></span>'+I.down+'</summary><div class="acc-b">'+
     '<div class="field-row"><label for="tn">Your name</label><input class="input" id="tn" style="width:170px" value="'+esc(T.name)+'" placeholder="Trainer"></div>'+
+    '<div class="field-row col"><label for="th">Where you start the day<span class="hint">Your home or gym, so drive times can be worked out</span></label><input class="input" id="th" value="'+esc(T.home||'')+'" placeholder="Area, e.g. Al Barsha"></div>'+
     '<div class="field-row col"><span class="lbl">Working hours<span class="hint">The rows you see on the Times grid</span></span><div class="hours"><select class="input num" id="ts" aria-label="Start">'+hourOpts(0,23,T.start)+'</select><span class="muted">to</span><select class="input num" id="te" aria-label="End">'+hourOpts(1,24,T.end)+'</select></div></div>'+
     '<div class="field-row"><span class="lbl">Max sessions a day</span><div class="stepper"><button data-mx="-1" aria-label="Fewer">−</button><output class="num">'+T.maxPerDay+'</output><button data-mx="1" aria-label="More">+</button></div></div>'+
     '<div class="field-row"><label for="tcur">Currency<span class="hint">For pack prices and reminders</span></label><input class="input" id="tcur" style="width:100px;text-align:center" value="'+esc(T.cur||'AED')+'"></div>'+
@@ -1081,6 +1186,7 @@ function renderClients(){
   $('#rs',v).addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{try{const n=JSON.parse(t);if(!n||!n.trainer||!Array.isArray(n.clients))throw 0;const u=snapshot();S=n;save();render();toast('Backup restored',u);}catch(x){toast('That file isn’t a Week Planner backup');}});e.target.value='';});
   $('#tn',v).addEventListener('input',e=>{T.name=e.target.value.trim();save();});
   $('#tcur',v).addEventListener('input',e=>{T.cur=e.target.value.trim()||'AED';save();});
+  $('#th',v).addEventListener('change',e=>{T.home=e.target.value.trim();save();ensureTravel();});
   $('#ts',v).addEventListener('change',e=>{T.start=Math.min(+e.target.value,T.end-1);save();renderClients();});
   $('#te',v).addEventListener('change',e=>{T.end=Math.max(+e.target.value,T.start+1);save();renderClients();});
   v.querySelectorAll('[data-mx]').forEach(b=>b.addEventListener('click',()=>{T.maxPerDay=Math.max(1,Math.min(16,T.maxPerDay+(+b.dataset.mx)));save();renderClients();}));
@@ -1091,16 +1197,18 @@ function renderClients(){
   v.querySelectorAll('details.acc').forEach(dl=>{const c=client(dl.dataset.acc);if(c)bindClient($('.acc-b',dl),c,false);});
 }
 function hourOpts(a,b,sel){let o='';for(let i=a;i<=b;i++)o+='<option value="'+i+'"'+(i===sel?' selected':'')+'>'+pad(i)+':00</option>';return o;}
-function clientSum(c){return c.sessions+' a week · '+c.len+' min · packs of '+(c.pack||10)+(c.price!=null?' · '+money(c.price):'');}
+function clientSum(c){const t=keyOf(new Date());if(c.away&&c.away.to>=t&&c.away.from<=keyOf(addDays(new Date(),7)))return 'On holiday until '+dm(fromKey(c.away.to))+(c.loc?' · '+c.loc:'');return (c.loc?c.loc+' · ':'')+c.sessions+' a week · '+c.len+' min';}
 function clientBody(c,isNew){
   const q=isNew?'n':c.id;
   return '<div class="stack"><label class="lbl" for="cn-'+q+'" style="font-weight:650">Name</label><input class="input" id="cn-'+q+'" data-f="name" value="'+esc(c.name)+'" placeholder="First name" autocomplete="off"></div>'+
     '<div class="stack"><span class="lbl" style="font-weight:650">Colour</span><div class="swatches">'+COLORS.map(k=>'<button class="sw" style="--c:'+k+'" data-col="'+k+'" aria-label="Colour" aria-pressed="'+(c.color===k)+'"></button>').join('')+'</div></div>'+
+    '<div class="field-row col"><label for="cl-'+q+'">Where you train them<span class="hint">Area or address, used for drive times</span></label><input class="input" id="cl-'+q+'" data-f="loc" value="'+esc(c.loc||'')+'" placeholder="e.g. JLT, Cluster D"></div>'+
     '<div class="field-row"><span class="lbl">Sessions a week<span class="hint">You can change it week by week</span></span><div class="stepper"><button data-cs="-1" aria-label="Fewer">−</button><output class="num" data-f="sessions">'+c.sessions+'</output><button data-cs="1" aria-label="More">+</button></div></div>'+
     '<div class="field-row col"><span class="lbl">Session length</span><div class="pills fill" style="--k:5">'+[30,45,60,75,90].map(l=>'<button class="pill" data-len="'+l+'" aria-pressed="'+(c.len===l)+'">'+l+'</button>').join('')+'</div></div>'+
     '<div class="field-row col"><span class="lbl">Sessions in a pack</span><div class="pills fill" style="--k:3">'+[5,10,20].map(l=>'<button class="pill" data-pk="'+l+'" aria-pressed="'+((c.pack||10)===l)+'">'+l+'</button>').join('')+'</div></div>'+
     '<div class="field-row"><label for="cpr-'+q+'">Pack price<span class="hint">Optional, '+esc(S.trainer.cur||'AED')+', used in reminders</span></label><input class="input num" id="cpr-'+q+'" data-f="price" inputmode="decimal" style="width:110px" value="'+(c.price!=null?c.price:'')+'" placeholder="0"></div>'+
     '<div class="field-row"><span class="lbl">Spread across the week<span class="hint">Avoid back to back days where possible</span></span><label class="switch"><input type="checkbox" data-f="spread"'+(c.spread?' checked':'')+' aria-label="Spread across the week"><span></span></label></div>'+
+    '<div class="field-row col"><span class="lbl">Away or on holiday<span class="hint">Nothing gets booked between these dates</span></span><div class="hours"><input class="input" type="date" data-f="afrom" value="'+esc((c.away||{}).from||'')+'" aria-label="Away from"><span class="muted">to</span><input class="input" type="date" data-f="ato" value="'+esc((c.away||{}).to||'')+'" aria-label="Away until"></div>'+(c.away?'<button class="btn btn-ghost btn-sm" data-f="aclear">Clear holiday</button>':'')+'</div>'+
     (isNew?'<div><button class="btn btn-primary btn-big" data-act="add" style="width:100%">Add client</button></div>':'<div><button class="btn btn-danger btn-sm" data-act="del">Remove '+esc(c.name)+'</button></div>');
 }
 function bindClient(r,c,isNew){
@@ -1113,6 +1221,11 @@ function bindClient(r,c,isNew){
   r.querySelectorAll('[data-pk]').forEach(b=>b.addEventListener('click',()=>{live.pack=+b.dataset.pk;r.querySelectorAll('[data-pk]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));refresh();}));
   r.querySelector('[data-f="price"]').addEventListener('input',e=>{const v=parseFloat(e.target.value.replace(/[^0-9.]/g,''));live.price=isFinite(v)?v:null;refresh();});
   r.querySelector('[data-f="spread"]').addEventListener('change',e=>{live.spread=e.target.checked;refresh();});
+  r.querySelector('[data-f="loc"]').addEventListener('change',e=>{live.loc=e.target.value.trim();refresh();if(!isNew)ensureTravel();});
+  const af=r.querySelector('[data-f="afrom"]'),at=r.querySelector('[data-f="ato"]');
+  const setAway=()=>{if(af.value&&at.value){if(at.value<af.value)at.value=af.value;live.away={from:af.value,to:at.value};}else if(!af.value&&!at.value)delete live.away;refresh();};
+  af.addEventListener('change',setAway);at.addEventListener('change',setAway);
+  const ac=r.querySelector('[data-f="aclear"]');if(ac)ac.addEventListener('click',()=>{delete live.away;af.value='';at.value='';refresh();ac.remove();});
   const ad=r.querySelector('[data-act="add"]');if(ad)ad.addEventListener('click',()=>{const n=nm.value.trim();if(!n){nm.focus();return;}live.name=n;S.clients.push(live);UI.acc=UI.acc||{};save();closeSheet();renderClients();toast(n+' added');});
   const del=r.querySelector('[data-act="del"]');let armed=false;if(del)del.addEventListener('click',()=>{
     if(!armed){armed=true;del.textContent='Tap again to remove '+live.name;return;}
@@ -1125,8 +1238,49 @@ function clientSheet(){
   openSheet(sheetHead('New client','They get their own colour on the week.')+clientBody(c,true),r=>bindClient(r,c,true));
 }
 
+/* v1.7: full example set (different frequencies, places, payment states, a holiday) and Melissa's Mon to Fri hours */
+function migrate17(){
+  if(S.m17)return;S.m17=1;
+  const T=S.trainer;T.name=T.name||'Melissa';T.home=T.home||'Al Barsha';T.start=6;T.end=20;T.maxPerDay=6;T.buffer=0;T.cur=T.cur||'AED';
+  T.usual=av({0:[[6,13],[15,20]],1:[[6,13],[15,20]],2:[[6,13],[15,20]],3:[[6,13],[15,20]],4:[[6,13],[15,20]]});
+  S.travel=Object.assign({},{"al barsha|dubai marina":[15,25],"al barsha|business bay":[20,30],"al barsha|jumeirah 1":[25,40],"al barsha|jlt":[15,25],"al barsha|downtown":[25,40],"al barsha|arabian ranches":[20,30],"al barsha|mirdif":[45,70],"al barsha|palm jumeirah":[15,25],"al barsha|dubai hills":[15,25],"business bay|dubai marina":[30,50],"dubai marina|jumeirah 1":[35,55],"dubai marina|jlt":[10,15],"downtown|dubai marina":[35,55],"arabian ranches|dubai marina":[25,40],"dubai marina|mirdif":[55,90],"dubai marina|palm jumeirah":[10,15],"dubai hills|dubai marina":[20,30],"business bay|jumeirah 1":[15,25],"business bay|jlt":[30,50],"business bay|downtown":[10,15],"arabian ranches|business bay":[30,50],"business bay|mirdif":[30,50],"business bay|palm jumeirah":[30,50],"business bay|dubai hills":[20,30],"jlt|jumeirah 1":[35,55],"downtown|jumeirah 1":[10,15],"arabian ranches|jumeirah 1":[35,55],"jumeirah 1|mirdif":[30,50],"jumeirah 1|palm jumeirah":[30,50],"dubai hills|jumeirah 1":[25,40],"downtown|jlt":[35,55],"arabian ranches|jlt":[25,40],"jlt|mirdif":[55,90],"jlt|palm jumeirah":[15,25],"dubai hills|jlt":[25,40],"arabian ranches|downtown":[30,50],"downtown|mirdif":[30,50],"downtown|palm jumeirah":[30,50],"downtown|dubai hills":[20,30],"arabian ranches|mirdif":[40,65],"arabian ranches|palm jumeirah":[30,50],"arabian ranches|dubai hills":[15,25],"mirdif|palm jumeirah":[50,80],"dubai hills|mirdif":[40,65],"dubai hills|palm jumeirah":[20,30]},S.travel||{});
+  S.clients=S.clients.filter(c=>!c.example);
+  const now=new Date(),cur=keyOf(mondayOf(now)),prev=keyOf(addDays(mondayOf(now),-7));
+  const awayFrom=keyOf(addDays(now,1)),awayTo=keyOf(addDays(now,16));
+  const E=[
+    ['Sara','Dubai Marina',3,60,10,3000,true,{0:[[6,9]],2:[[6,9]],4:[[6,9]]},6],
+    ['Omar','Business Bay',2,60,10,3000,true,{1:[[17,20]],3:[[17,20]]},-1],
+    ['Lina','Jumeirah 1',1,45,5,1250,true,{0:[[9,12]],1:[[9,12]],2:[[9,12]],3:[[9,12]],4:[[9,12]]},1],
+    ['James','JLT',5,60,20,5500,true,{0:[[6,7]],1:[[6,7]],2:[[6,7]],3:[[6,7]],4:[[6,7]]},12],
+    ['Priya','Downtown',3,60,10,null,true,{1:[[12,13]],2:[[12,13]],3:[[12,13]],4:[[10,12]]},0],
+    ['Nadia','Arabian Ranches',2,90,10,3000,true,{2:[[15,18]],4:[[15,18]]},4],
+    ['Karim','Mirdif',2,60,10,3000,true,{0:[[15,17]],3:[[15,17]]},2],
+    ['Elena','Palm Jumeirah',3,60,10,3000,true,{0:[[10,12]],1:[[7,8]],2:[[10,12]],4:[[10,12]]},5],
+    ['Yousef','Dubai Hills',4,60,10,3000,false,{0:[[18,20]],1:[[18,20]],2:[[18,20]],3:[[18,20]]},null],
+    ['Hana','Al Barsha',1,60,5,1500,true,{4:[[15,17]]},3]
+  ];
+  const used=S.clients.map(c=>c.color);let ci=0;const col=()=>{while(used.includes(COLORS[ci%COLORS.length])&&ci<40)ci++;const k=COLORS[ci%COLORS.length];used.push(k);return k;};
+  const target={};
+  E.forEach((e,i)=>{const id='x'+(i+1);S.clients.push({id,name:e[0],loc:e[1],sessions:e[2],len:e[3],pack:e[4],price:e[5],spread:e[6],color:col(),usual:av(e[7]),example:true});target[id]=e[8];});
+  const nad=S.clients.find(c=>c.name==='Nadia'&&c.example);if(nad)nad.away={from:awayFrom,to:awayTo};
+  const lia=S.clients.find(c=>c.id==='lia');if(lia&&!lia.usual){lia.usual=av({1:[[10,12]],3:[[10,12]]});lia.sessions=2;}
+  const amir=S.clients.find(c=>c.id==='amir');if(amir)amir.sessions=3;
+  S.weeks={};S.pay={};S.introDone=false;
+  [prev,cur].forEach(k=>{const w=W(k);w.sched=solve(w);w.built=true;});
+  const pw=S.weeks[prev];
+  const firstOf=n=>{const c=S.clients.find(x=>x.name===n&&x.example);return c?pw.sched.filter(x=>x.c===c.id).sort((a,b)=>a.d-b.d||a.s-b.s)[0]:null;};
+  const s1=firstOf('Sara');if(s1)s1.st='cx';const s2=firstOf('Elena');if(s2)s2.st='late';const s3=firstOf('Omar');if(s3)s3.st='late';
+  S.clients.filter(c=>c.example&&target[c.id]!=null).forEach(c=>{
+    const u=usage(c),base=u.used+target[c.id],P=c.pack||10,list=[];
+    if(base>=P){list.push({id:uid(),date:keyOf(addDays(now,-12)),n:P,amt:c.price,note:''});if(base-P>0)list.push({id:uid(),date:keyOf(addDays(now,-40)),n:base-P,amt:null,note:'Left on previous pack'});}
+    else if(base>0)list.push({id:uid(),date:keyOf(addDays(now,-30)),n:base,amt:null,note:'Left on current pack'});
+    if(list.length)S.pay[c.id]=list;
+  });
+  try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}
+}
 /* ---------- start ---------- */
 $('#ver').textContent=VERSION;$('#ver2').textContent=VERSION+' · '+STAMP;
+migrate17();
 render();
 setTimeout(()=>{connect();connectAI();},0);
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
