@@ -390,6 +390,13 @@ button.tag{border:0;min-height:44px;padding:0 16px;font-size:var(--t-sm);cursor:
 .intro .btn{justify-self:start}
 .tools{display:grid;grid-template-columns:repeat(var(--k),minmax(0,1fr));gap:8px}
 .tools .btn{padding:0 8px}
+.sess-wrap{position:relative}
+.sess-wrap .sess{padding-right:60px}
+.x-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:0;background:rgb(255 255 255 / .75);display:grid;place-items:center;color:var(--ink-2)}
+.x-btn svg{width:18px;height:18px}
+.x-btn:active{transform:translateY(-50%) scale(.92)}
+.blk{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.blk.dragging{z-index:6;opacity:.92;box-shadow:0 16px 30px -12px rgb(40 30 15 / .5),inset 0 0 0 2px var(--c);transition:none;cursor:grabbing}
 .foot{text-align:center;color:var(--ink-3);font-size:var(--t-xs);padding:var(--s7) 0 var(--s4)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -422,7 +429,7 @@ button.tag{border:0;min-height:44px;padding:0 16px;font-size:var(--t-sm);cursor:
 <script>
 (function(){
 'use strict';
-const VERSION='v1.9';
+const VERSION='v2.0';
 const STAMP='20/11/2026';
 const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const DS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -732,7 +739,7 @@ function todayCard(){
   if(S.trainer.home){const m=locOf(L[0].c)?travel(S.trainer.home,locOf(L[0].c),L[0].s):0;if(m)h+='<div class="drive">'+CAR+'<span>Leave '+esc(S.trainer.home)+' by <b>'+fmt(L[0].s-m)+'</b><small> · '+m+' min drive</small></span></div>';}
   L.forEach((x,i)=>{const c=client(x.c),done=x.s+x.len<=nowM;
     if(i)h+=driveRow(locOf(L[i-1].c),locOf(x.c),L[i-1].s+L[i-1].len,x.s);
-    h+='<button class="sess'+(done?' done':'')+'" style="--c:'+c.color+'" data-today="'+x.id+'"><span class="time">'+fmt(x.s)+'</span><span class="who"><b>'+esc(c.name)+'</b><small>'+(c.loc?esc(c.loc)+' · ':'')+(done?'Done':'until '+fmt(x.s+x.len))+'</small></span>'+(x.st==='late'?'<small class="lc">Late cancel</small>':'')+'</button>';});
+    h+='<div class="sess-wrap"><button class="sess'+(done?' done':'')+'" style="--c:'+c.color+'" data-today="'+x.id+'"><span class="time">'+fmt(x.s)+'</span><span class="who"><b>'+esc(c.name)+'</b><small>'+(c.loc?esc(c.loc)+' · ':'')+(done?'Done':'until '+fmt(x.s+x.len))+'</small></span>'+(x.st==='late'?'<small class="lc">Late cancel</small>':'')+'</button><button class="x-btn" data-x="'+x.id+'" data-xk="'+tk+'" aria-label="'+esc(c.name)+' cancelled">'+I.close+'</button></div>';});
   h+='</div>';
   const dr=dayDrive(L);if(dr)h+='<p class="small muted" style="margin-top:12px">About '+hm(dr)+' of driving today, home and back.</p>';
   return h+'</div>';
@@ -784,7 +791,7 @@ function renderWeek(){
     h+='<div class="seg" role="group" aria-label="View">'+[['cal','Calendar'],['list','List'],['free','Who’s free']].map(([k,l])=>'<button data-view="'+k+'" aria-pressed="'+(vw===k)+'">'+l+'</button>').join('')+'</div>';
     if(vw==='free')h+='<p class="free-legend">Dots show who can train in each hour. Tap an hour for names.</p>'+calendar(wk,all,true);
     else if(vw==='list')h+=agenda(wk,all);
-    else h+=calendar(wk,all,false);
+    else h+='<p class="free-legend">Hold a session and drag it to move it. Tap it to cancel or change it.</p>'+calendar(wk,all,false);
   }
   v.innerHTML=h;v.classList.toggle('fresh',UI.fresh);UI.fresh=false;
   bindWeekBar(v);
@@ -797,7 +804,9 @@ function renderWeek(){
       toast(miss?'Rebuilt, '+miss+' still to sort':'Rebuilt, everyone fits');},60);
   });
   const sb=$('#share',v);if(sb)sb.addEventListener('click',shareSheet);
-  v.querySelectorAll('[data-s]').forEach(b=>b.addEventListener('click',()=>sessionSheet(b.dataset.s)));
+  v.querySelectorAll('[data-s]').forEach(b=>b.addEventListener('click',()=>{if(UI.noClick)return;sessionSheet(b.dataset.s);}));
+  v.querySelectorAll('[data-x]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();cancelSheet(b.dataset.x,b.dataset.xk);}));
+  bindDrag(v);
   v.querySelectorAll('[data-today]').forEach(b=>b.addEventListener('click',()=>{UI.wk=keyOf(mondayOf(new Date()));sessionSheet(b.dataset.today);}));
   v.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{UI.view=b.dataset.view;try{localStorage.setItem(LS+'.view',UI.view);}catch(e){}renderWeek();}));
   v.querySelectorAll('[data-fd]').forEach(b=>b.addEventListener('click',()=>freeSheet(+b.dataset.fd,+b.dataset.fh)));
@@ -815,7 +824,7 @@ function agenda(wk,sched){
     if(!L.length)h+='<p class="free">Nothing booked</p>';
     if(L.length&&S.trainer.home){const f=L.find(x=>x.st!=='cx');if(f){const m=locOf(f.c)?travel(S.trainer.home,locOf(f.c),f.s):0;if(m)h+='<div class="drive">'+CAR+'<span>Leave '+esc(S.trainer.home)+' by '+fmt(f.s-m)+'<small> · '+m+' min drive</small></span></div>';}}
     let prevX=null;
-    L.forEach(x=>{const c=client(x.c);if(prevX&&x.st!=='cx'){h+=driveRow(locOf(prevX.c),locOf(x.c),prevX.s+prevX.len,x.s);}if(x.st!=='cx')prevX=x;h+='<button class="sess'+(valid(wk,x)?'':' bad')+(x.st?' st-'+x.st:'')+'" style="--c:'+c.color+';--i:'+(i++)+'" data-s="'+x.id+'"><span class="time">'+fmt(x.s)+'</span><span class="who"><b>'+esc(c.name)+'</b><small class="num">'+(c.loc&&!x.st?esc(c.loc)+' · ':'')+(x.st==='cx'?'Cancelled, not charged':x.st==='late'?'Late cancel, charged':'until '+fmt(x.s+x.len))+(valid(wk,x)?'':' · check this one')+'</small></span>'+(x.lock?LOCK:'')+'</button>';});
+    L.forEach(x=>{const c=client(x.c);if(prevX&&x.st!=='cx'){h+=driveRow(locOf(prevX.c),locOf(x.c),prevX.s+prevX.len,x.s);}if(x.st!=='cx')prevX=x;h+='<div class="sess-wrap"><button class="sess'+(valid(wk,x)?'':' bad')+(x.st?' st-'+x.st:'')+'" style="--c:'+c.color+';--i:'+(i++)+'" data-s="'+x.id+'"><span class="time">'+fmt(x.s)+'</span><span class="who"><b>'+esc(c.name)+'</b><small class="num">'+(c.loc&&!x.st?esc(c.loc)+' · ':'')+(x.st==='cx'?'Cancelled, not charged':x.st==='late'?'Late cancel, charged':'until '+fmt(x.s+x.len))+(valid(wk,x)?'':' · check this one')+'</small></span>'+(x.lock?LOCK:'')+'</button>'+(x.st==='cx'?'':'<button class="x-btn" data-x="'+x.id+'" data-xk="'+UI.wk+'" aria-label="'+esc(c.name)+' cancelled">'+I.close+'</button>')+'</div>';});
     h+='</div></div>';
   });
   return h+'</div>';
@@ -824,13 +833,13 @@ function calendar(wk,sched,free){
   const T=S.trainer,days=workDays(wk,sched);
   let lo=T.start*60,hi=T.end*60;sched.forEach(x=>{lo=Math.min(lo,Math.floor(x.s/60)*60);hi=Math.max(hi,Math.ceil((x.s+x.len)/60)*60);});
   const HP=matchMedia('(max-width:599px)').matches?44:54,px=m=>(m-lo)/60*HP,H=px(hi);
-  let h='<div class="cal" style="--cols:'+days.length+'"><div class="cal-head"><div></div>';
+  let h='<div class="cal" data-lo="'+lo+'" data-hp="'+HP+'" style="--cols:'+days.length+'"><div class="cal-head"><div></div>';
   days.forEach(d=>{const dt=dayDate(UI.wk,d);h+='<div>'+DS[d]+'<small class="num">'+dm(dt)+'</small></div>';});
   h+='</div><div class="cal-body"><div class="cal-hours" style="height:'+H+'px">';
   for(let m=lo;m<=hi;m+=60)h+='<span class="num" style="top:'+px(m)+'px">'+fmt(m)+'</span>';
   h+='</div>';let i=0;
   days.forEach(d=>{
-    h+='<div class="cal-col" style="height:'+H+'px">';
+    h+='<div class="cal-col" data-d="'+d+'" style="height:'+H+'px">';
     ranges(wk.avail.t[d]).forEach(([a,b])=>{a=Math.max(a,lo);b=Math.min(b,hi);if(b>a)h+='<div class="open" style="top:'+px(a)+'px;height:'+(px(b)-px(a))+'px"></div>';});
     for(let m=lo+60;m<hi;m+=60)h+='<div class="hl" style="top:'+px(m)+'px"></div>';
     if(free){
@@ -853,6 +862,56 @@ function freeSheet(d,m){
   openSheet(sheetHead(DAYS[d]+' '+dt.getDate()+' '+MONTHS[dt.getMonth()],fmt(m)+' to '+fmt(m+60))+
     '<div class="stack"><p class="eyebrow">Booked</p>'+(booked.length?'<div class="list">'+booked.map(x=>{const c=client(x.c);return '<div class="pick-row" style="--c:'+c.color+'"><span class="big-dot"></span><b>'+esc(c.name)+'</b><small class="num">'+fmt(x.s)+' to '+fmt(x.s+x.len)+'</small></div>';}).join('')+'</div>':'<p class="small muted">Nobody yet.</p>')+'</div>'+
     '<div class="stack"><p class="eyebrow">Can train then ('+who.length+')</p>'+(who.length?'<div class="list">'+who.map(c=>'<div class="pick-row" style="--c:'+c.color+'"><span class="big-dot"></span><b>'+esc(c.name)+'</b><small class="num">'+rng(c)+'</small></div>').join('')+'</div>':'<p class="small muted">Nobody has this hour free.</p>')+'</div>');
+}
+function cancelSheet(id,k){
+  const wk=S.weeks[k];if(!wk)return;const x=wk.sched.find(s=>s.id===id);if(!x)return;const c=client(x.c),dt=dayDate(k,x.d);
+  openSheet(sheetHead(esc(c.name)+' can’t make it?',DAYS[x.d]+' '+dt.getDate()+' '+MONTHS[dt.getMonth()]+', '+fmt(x.s))+
+    '<div class="stack"><button class="btn btn-primary btn-big" data-cx="cx" style="width:100%">Cancelled, not charged</button>'+
+    '<button class="btn btn-ghost btn-big" data-cx="late" style="width:100%">Late cancel, charged</button>'+
+    (x.st==='late'?'<button class="btn btn-ghost btn-big" data-cx="" style="width:100%">They came after all</button>':'')+
+    '<p class="small muted">A cancelled session doesn’t count towards their pack and frees the slot. A late cancel still counts. Payments update straight away.</p></div>',
+  r=>r.querySelectorAll('[data-cx]').forEach(b=>b.addEventListener('click',()=>{
+    const u=snapshot();if(b.dataset.cx)x.st=b.dataset.cx;else delete x.st;x.lock=true;save();closeSheet();render();
+    toast(x.st==='cx'?c.name+' cancelled, not charged':x.st==='late'?c.name+' late cancel, charged':c.name+' back on',u);
+  })));
+}
+function dropSession(id,d,m){
+  const wk=W(),x=wk.sched.find(s=>s.id===id);if(!x)return;const c=client(x.c);
+  m=Math.max(0,Math.min(1440-x.len,m));if(x.d===d&&x.s===m){renderWeek();return;}
+  const cand={c:x.c,d,s:m,e:m+x.len};
+  const hit=live(wk).find(p=>p!==x&&conflict(asE(p),cand));
+  if(hit){const hc=client(hit.c);renderWeek();toast(hit.c===x.c?c.name+' already has a session that day':'That clashes with '+hc.name+(locOf(hit.c)&&c.loc?', with the drive':''));return;}
+  const u=snapshot();x.d=d;x.s=m;x.lock=true;save();renderWeek();
+  const okC=okR((wk.avail[c.id]||[])[d],m,m+x.len),okT=okR(wk.avail.t[d],m,m+x.len);
+  toast('Moved to '+DS[d]+' '+fmt(m)+(okC&&okT?'':!okT?', outside your hours':', outside '+c.name+'’s times'),u);
+}
+let DRAG=null;
+document.addEventListener('touchmove',e=>{if(DRAG&&DRAG.drag)e.preventDefault();},{passive:false});
+function bindDrag(v){
+  const cal=$('.cal',v);if(!cal||UI.view==='free')return;
+  const lo=+cal.dataset.lo,HP=+cal.dataset.hp;
+  const start=(el,x,y,touch)=>{const r=el.getBoundingClientRect();DRAG={el,id:el.dataset.s,x0:x,y0:y,lx:x,ly:y,grab:y-r.top,drag:false,touch};
+    if(touch)DRAG.timer=setTimeout(()=>{if(DRAG&&DRAG.el===el){DRAG.drag=true;el.classList.add('dragging');if(navigator.vibrate)navigator.vibrate(8);}},300);};
+  const move=(x,y)=>{if(!DRAG)return;const dx=x-DRAG.x0,dy=y-DRAG.y0;
+    if(!DRAG.drag){if(Math.hypot(dx,dy)<7)return;if(DRAG.touch){clearTimeout(DRAG.timer);DRAG=null;return;}DRAG.drag=true;DRAG.el.classList.add('dragging');}
+    DRAG.lx=x;DRAG.ly=y;DRAG.el.style.transform='translate('+dx+'px,'+dy+'px)';};
+  const end=()=>{if(!DRAG)return;const D=DRAG;DRAG=null;clearTimeout(D.timer);if(!D.drag)return;
+    UI.noClick=true;setTimeout(()=>{UI.noClick=false;},400);
+    D.el.style.visibility='hidden';const under=document.elementFromPoint(D.lx,D.ly);D.el.style.visibility='';
+    D.el.classList.remove('dragging');D.el.style.transform='';
+    const col=under&&under.closest&&under.closest('.cal-col');if(!col){renderWeek();return;}
+    const cr=col.getBoundingClientRect(),top=D.ly-D.grab-cr.top;
+    dropSession(D.id,+col.dataset.d,lo+Math.round(top/HP*60/15)*15);};
+  const cancel=()=>{if(!DRAG)return;clearTimeout(DRAG.timer);DRAG.el.classList.remove('dragging');DRAG.el.style.transform='';DRAG=null;};
+  cal.querySelectorAll('.blk').forEach(el=>{
+    el.addEventListener('touchstart',e=>{const t=e.touches[0];start(el,t.clientX,t.clientY,true);},{passive:true});
+    el.addEventListener('touchmove',e=>{const t=e.touches[0];move(t.clientX,t.clientY);},{passive:true});
+    el.addEventListener('touchend',()=>end());el.addEventListener('touchcancel',cancel);
+    el.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button>0)return;start(el,e.clientX,e.clientY,false);try{el.setPointerCapture(e.pointerId);}catch(_){}});
+    el.addEventListener('pointermove',e=>{if(e.pointerType==='mouse')move(e.clientX,e.clientY);});
+    el.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')end();});
+    el.addEventListener('contextmenu',e=>e.preventDefault());
+  });
 }
 function sessionSheet(id){
   const wk=W(),x=wk.sched.find(s=>s.id===id);if(!x)return;const c=client(x.c);const dt=dayDate(UI.wk,x.d);
