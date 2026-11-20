@@ -398,7 +398,7 @@ dialog.sheet::backdrop{background:rgb(35 28 18 / .38)}
 <script>
 (function(){
 'use strict';
-const VERSION='v1.5';
+const VERSION='v1.6';
 const STAMP='20/11/2026';
 const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const DS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -672,6 +672,7 @@ function bindWeekBar(root){root.querySelectorAll('[data-wk]').forEach(b=>b.addEv
 /* ---------- WEEK ---------- */
 function renderWeek(){
   const v=$('#v-week'),wk=W(),T=S.trainer;
+  if(!wk.built&&!wk.sched.length&&S.clients.some(c=>need(wk,c)>0&&hasTimes(wk,c.id))){wk.sched=solve(wk);wk.built=true;UI.fresh=true;save();}
   const total=S.clients.reduce((a,c)=>a+need(wk,c),0);
   const all=wk.sched.filter(x=>client(x.c)),sched=all.filter(x=>x.st!=='cx');
   const withTimes=S.clients.filter(c=>need(wk,c)>0&&hasTimes(wk,c.id)).length;
@@ -689,7 +690,9 @@ function renderWeek(){
      (sched.length?'<button class="btn btn-ghost btn-big" id="share">'+I.msg+'Send times</button>':'')+'</div></div>';
   if((wk.built||sched.length)&&short.length){
     h+='<div class="issues"><h3>Needs a look</h3>';
-    short.forEach(c=>{const p=sched.filter(x=>x.c===c.id).length,n=need(wk,c);
+    const noT=short.filter(c=>!hasTimes(wk,c.id));
+    if(noT.length>1)h+='<div class="issue"><div class="issue-top">No times yet for '+noT.length+' clients</div><p>'+noT.map(c=>esc(c.name)).join(', ')+'</p><div class="two"><button class="btn btn-ghost btn-sm" data-times="'+noT[0].id+'">Add times</button>'+(aiOn()?'<button class="btn btn-ghost btn-sm" data-paste>Paste messages</button>':'<span></span>')+'</div></div>';
+    short.filter(c=>noT.length<2||hasTimes(wk,c.id)).forEach(c=>{const p=sched.filter(x=>x.c===c.id).length,n=need(wk,c);
       h+='<div class="issue" style="--c:'+c.color+'"><div class="issue-top"><span class="dot"></span>'+esc(c.name)+' <span class="muted small" style="font-weight:600">'+p+' of '+n+' placed</span></div><p>'+esc(why(wk,c))+'</p><div class="two"><button class="btn btn-ghost btn-sm" data-times="'+c.id+'">Change times</button><button class="btn btn-ghost btn-sm" data-fewer="'+c.id+'">'+(p?'Book '+p+' this week':'Skip this week')+'</button></div></div>';});
     h+='</div>';
   }
@@ -719,6 +722,7 @@ function renderWeek(){
   v.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{UI.view=b.dataset.view;try{localStorage.setItem(LS+'.view',UI.view);}catch(e){}renderWeek();}));
   v.querySelectorAll('[data-fd]').forEach(b=>b.addEventListener('click',()=>freeSheet(+b.dataset.fd,+b.dataset.fh)));
   const pw=$('#pastew',v);if(pw)pw.addEventListener('click',pasteSheet);
+  v.querySelectorAll('[data-paste]').forEach(b=>b.addEventListener('click',pasteSheet));
   v.querySelectorAll('[data-jump]').forEach(b=>b.addEventListener('click',()=>{const el=document.getElementById('day-'+b.dataset.jump);if(el)el.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});}));
 }
 function workDays(wk,sched){const o=[];for(let d=0;d<7;d++)if((wk.avail.t&&wk.avail.t[d].includes('1'))||sched.some(x=>x.d===d))o.push(d);return o;}
