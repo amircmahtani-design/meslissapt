@@ -11,9 +11,10 @@ function buildPrompt({ text, clients, weekStart, weekEnd, start, end }) {
     'Known clients: ' + (clients.length ? clients.join(', ') : 'none') + '. Use the known name when a message clearly refers to one of them (first names, nicknames, typos).\n' +
     'The trainer works ' + S + ':00 to ' + E + ':00. Interpret: early morning = ' + S + ':00-09:00, morning = ' + S + ':00-12:00, lunchtime = 12:00-14:00, afternoon = 12:00-17:00, evening = 17:00-' + E + ':00, "after X" = X until ' + E + ':00, "before X" = ' + S + ':00 until X, "any time"/"flexible" = ' + S + ':00-' + E + ':00, weekdays = mon-fri. ' +
     'A time like "8.30 to 9.30" or "8:30-9:30" is that exact window. A bare start time like "at 7" or "7am" means a one hour window starting then (assume am if before 11, otherwise pm, unless stated). ' +
-    'If a message says "every day" or lists days, include each of those days. Days not mentioned are unavailable. Round to 30 minutes, 24 hour HH:MM.\n' +
+    'If a message says "every day" or lists days, include each of those days. Days not mentioned are unavailable. Round windows to 30 minutes, 24 hour HH:MM.\n' +
     'If a client says how many sessions they want this week, give it as sessions, otherwise null.\n' +
-    'Reply with JSON only, no prose, no code fences: {"people":[{"name":"Sara","sessions":3,"days":{"mon":[["06:00","08:00"]],"wed":[["06:00","08:00"]]}}]}\n\n' +
+    'IMPORTANT: when a message gives exact session start times for specific days (e.g. "M 8:15am, W 9am, F 9am", "Monday at 7", "see you Tue 6.30"), these are bookings, not windows: put each one in "fixed" as {"day":"mon","time":"08:15"} with the exact time to the minute (do not round), and ALSO include a one hour window from that time in "days". Ranges like "between 8 and 10", "after 6", "mornings" are windows only and go in "days", never in "fixed". Single letters: M=mon, T or Tu=tue, W=wed, Th=thu, F=fri, Sa=sat, Su=sun.\n' +
+    'Reply with JSON only, no prose, no code fences: {"people":[{"name":"Sara","sessions":3,"days":{"mon":[["06:00","08:00"]],"wed":[["06:00","08:00"]]},"fixed":[]},{"name":"Amir","sessions":null,"days":{"mon":[["08:15","09:15"]]},"fixed":[{"day":"mon","time":"08:15"}]}]}\n\n' +
     'Messages:\n' + text;
 }
 

@@ -181,12 +181,14 @@ section.view{display:grid;gap:var(--s5);grid-template-columns:minmax(0,1fr)}
 .field-row .hint{display:block;font-size:var(--t-xs);font-weight:500;color:var(--ink-3)}
 
 .grid-wrap{user-select:none;-webkit-user-select:none}
-.g-head{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));gap:4px;margin-bottom:6px}
+.g-head{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));gap:4px;margin-bottom:12px}
 .g-head button{min-height:44px;border:0;border-radius:14px;background:var(--surface-2);font-weight:700;font-size:.82rem;line-height:1.1;padding:4px 0}
 .g-head button small{display:block;font-weight:600;color:var(--ink-3);font-size:.75rem}
-.g-body{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px}
+.g-body{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px;padding-bottom:12px}
 .g-hours{display:grid;gap:4px}
-.g-hours button{height:var(--cell);border:0;background:transparent;font-size:.78rem;color:var(--ink-3);font-weight:600;text-align:right;padding:0 4px 0 0;font-variant-numeric:tabular-nums}
+.g-hours button{position:relative;height:var(--cell);border:0;background:transparent;font-size:.75rem;color:var(--ink-3);font-weight:600;text-align:right;padding:0;font-variant-numeric:tabular-nums}
+.g-hours button span{position:absolute;right:4px;top:-2px;transform:translateY(-50%);line-height:1;background:var(--surface);padding:0 1px}
+.g-hours button span.end{top:auto;bottom:-2px;transform:translateY(50%)}
 .g-cells{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;touch-action:none}
 .cell{height:var(--cell);border-radius:10px;background:#efe9de;transition:background-color .12s linear}
 .cell.off{background:repeating-linear-gradient(135deg,#ece5d9 0 5px,#f5f0e8 5px 10px)}
@@ -387,6 +389,7 @@ button.tag{border:0;min-height:44px;padding:0 16px;font-size:var(--t-sm);cursor:
 .intro h2{font-size:var(--t-1)}
 .intro ol{margin:0;padding-left:22px;display:grid;gap:10px;color:var(--ink-2)}
 .intro ol b{color:var(--ink)}
+.intro ul{margin:8px 0;padding-left:18px;display:grid;gap:6px}
 .intro .btn{justify-self:start}
 .tools{display:grid;grid-template-columns:repeat(var(--k),minmax(0,1fr));gap:8px}
 .tools .btn{padding:0 8px}
@@ -429,7 +432,7 @@ button.tag{border:0;min-height:44px;padding:0 16px;font-size:var(--t-sm);cursor:
 <script>
 (function(){
 'use strict';
-const VERSION='v2.0';
+const VERSION='v2.1';
 const STAMP='20/11/2026';
 const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const DS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -748,7 +751,7 @@ function introCard(){
   if(S.introDone)return '';
   return '<div class="card intro"><h2>How it works</h2><ol>'+
     '<li><b>Add your clients</b> once, with where they live and how often they train.</li>'+
-    '<li><b>Each week, paste their messages</b> (or type their times). The planner fits everyone in around you and the drive between them.</li>'+
+    '<li><b>Each week, put in their times.</b> Three ways, use whichever is easiest:<ul><li><b>Paste their messages</b> and the planner reads them for you.</li><li><b>Type their times</b> on the Times tab (days, from, to).</li><li><b>Book a session by hand</b> when a client gives you an exact time, like “Mon 8:15, Wed 9, Fri 9”.</li></ul>The planner then fits everyone else in around you and the drive between them.</li>'+
     '<li><b>Check the week and send each client their times.</b> Tap any session to move, lock or cancel it.</li></ol>'+
     '<button class="btn btn-primary" id="introok">Got it</button></div>';
 }
@@ -784,6 +787,7 @@ function renderWeek(){
      (total?'<div class="bar" aria-hidden="true"><i style="width:'+Math.round(Math.min(sched.length,total)/total*100)+'%"></i></div>':'')+
      (away.length?'<p class="small muted">On holiday: '+away.map(c=>'<b>'+esc(c.name)+'</b> (back '+backOn(c)+')').join(', ')+'</p>':'')+
      (aiOn()?'<button class="btn btn-primary btn-big" id="pastew" style="width:100%">'+I.spark+'Paste this week’s messages</button>':'')+
+     '<button class="btn btn-soft" id="bookhand" style="width:100%">'+I.plus+'Book a session by hand</button>'+
      '<div class="two"><button class="btn btn-ghost" id="build"'+(S.clients.length?'':' disabled')+'>Rebuild week</button><button class="btn btn-ghost" id="share"'+(sched.length?'':' disabled')+'>'+I.msg+'Send times</button></div></div>';
   const anyTimes=S.clients.some(c=>hasTimes(wk,c.id));
   if(sched.length||anyTimes){
@@ -797,6 +801,7 @@ function renderWeek(){
   bindWeekBar(v);
   const io=$('#introok',v);if(io)io.addEventListener('click',()=>{S.introDone=true;save();renderWeek();});
   const is=$('#issues',v);if(is)is.addEventListener('click',issuesSheet);
+  const bh=$('#bookhand',v);if(bh)bh.addEventListener('click',()=>bookSheet());
   const bb=$('#build',v);if(bb)bb.addEventListener('click',()=>{
     bb.setAttribute('aria-busy','true');bb.textContent='Working it out…';
     setTimeout(()=>{const w=W();w.sched=solve(w);w.built=true;save();UI.fresh=true;renderWeek();
@@ -863,6 +868,43 @@ function freeSheet(d,m){
     '<div class="stack"><p class="eyebrow">Booked</p>'+(booked.length?'<div class="list">'+booked.map(x=>{const c=client(x.c);return '<div class="pick-row" style="--c:'+c.color+'"><span class="big-dot"></span><b>'+esc(c.name)+'</b><small class="num">'+fmt(x.s)+' to '+fmt(x.s+x.len)+'</small></div>';}).join('')+'</div>':'<p class="small muted">Nobody yet.</p>')+'</div>'+
     '<div class="stack"><p class="eyebrow">Can train then ('+who.length+')</p>'+(who.length?'<div class="list">'+who.map(c=>'<div class="pick-row" style="--c:'+c.color+'"><span class="big-dot"></span><b>'+esc(c.name)+'</b><small class="num">'+rng(c)+'</small></div>').join('')+'</div>':'<p class="small muted">Nobody has this hour free.</p>')+'</div>');
 }
+function timeOpts(sel){const T=S.trainer;let o='';for(let m=T.start*60;m<=T.end*60-15;m+=15)o+='<option value="'+m+'"'+(m===sel?' selected':'')+'>'+fmt(m)+'</option>';return o;}
+/* place fixed sessions for a client: removes that client's unlocked sessions on those days, adds locked ones, opens their times to cover them */
+function bookFixed(wk,c,list){
+  const made=[];
+  list.forEach(({d,s:m})=>{
+    wk.sched=wk.sched.filter(x=>!(x.c===c.id&&x.d===d&&!x.st));
+    const x={id:uid(),c:c.id,d,s:m,len:c.len,lock:true};wk.sched.push(x);made.push(x);
+    if(!wk.avail[c.id])wk.avail[c.id]=blankWeek();wk.avail[c.id][d]=setR(wk.avail[c.id][d],Math.floor(m/30)*30,m+c.len,1);
+  });
+  const fixedN=wk.sched.filter(x=>x.c===c.id&&x.lock&&x.st!=='cx').length;
+  if(fixedN>need(wk,c))wk.need[c.id]=fixedN;
+  return made;
+}
+function rebuildAround(wk){wk.sched=solve(wk);wk.built=true;}
+function bookSheet(pre){
+  const wk=W();if(!S.clients.length){toast('Add a client first');return;}
+  let cid=pre||UI.bookC||S.clients[0].id,days=[],tm=UI.bookT!=null?UI.bookT:8*60+15;
+  const draw=()=>{const c=client(cid);
+    openSheet(sheetHead('Book a session','For when a client gives you an exact time. It stays put, and the week fits around it.')+
+      '<div class="stack"><p class="eyebrow">Who</p><div class="pills">'+S.clients.map(x=>'<button class="pill" style="'+(x.id===cid?'background:'+x.color+';border-color:'+x.color+';color:#fff':'')+'" data-bc="'+x.id+'">'+esc(x.name)+'</button>').join('')+'</div></div>'+
+      '<div class="stack"><p class="eyebrow">Which days</p><div class="daypick" style="--c:'+c.color+'">'+DS.map((n,d)=>'<button data-bd="'+d+'" aria-pressed="'+days.includes(d)+'">'+n+'</button>').join('')+'</div></div>'+
+      '<div class="field-row"><label for="bt">Start time<span class="hint">'+c.len+' min session</span></label><select class="input num" id="bt" style="width:130px">'+timeOpts(tm)+'</select></div>'+
+      '<p class="small muted">Different time on different days? Book one, then book the next.</p>'+
+      '<button class="btn btn-primary btn-big" id="bgo" style="width:100%"'+(days.length?'':' disabled')+'>'+(days.length?'Book '+days.length+' session'+(days.length>1?'s':'')+' at '+fmt(tm):'Pick the days')+'</button>',
+    r=>{
+      r.querySelectorAll('[data-bc]').forEach(b=>b.addEventListener('click',()=>{cid=b.dataset.bc;UI.bookC=cid;draw();}));
+      r.querySelectorAll('[data-bd]').forEach(b=>b.addEventListener('click',()=>{const d=+b.dataset.bd;days=days.includes(d)?days.filter(x=>x!==d):days.concat(d).sort();draw();}));
+      $('#bt',r).addEventListener('change',e=>{tm=+e.target.value;UI.bookT=tm;draw();});
+      $('#bgo',r).addEventListener('click',()=>{
+        const c=client(cid),u=snapshot();const made=bookFixed(wk,c,days.map(d=>({d,s:tm})));
+        const clash=made.filter(x=>live(wk).some(p=>p!==x&&p.lock&&conflict(asE(p),asE(x))));
+        rebuildAround(wk);save();closeSheet();UI.fresh=true;UI.view=UI.view==='free'?'cal':UI.view;renderWeek();
+        toast(clash.length?'Booked, but it clashes with another fixed session':'Booked '+c.name+', week rearranged around it',u);
+      });
+    });};
+  draw();
+}
 function cancelSheet(id,k){
   const wk=S.weeks[k];if(!wk)return;const x=wk.sched.find(s=>s.id===id);if(!x)return;const c=client(x.c),dt=dayDate(k,x.d);
   openSheet(sheetHead(esc(c.name)+' can’t make it?',DAYS[x.d]+' '+dt.getDate()+' '+MONTHS[dt.getMonth()]+', '+fmt(x.s))+
@@ -926,12 +968,15 @@ function sessionSheet(id){
     (bad?'<div class="issues" style="padding:16px"><p style="color:var(--warn);font-weight:600">This time no longer matches '+esc(c.name)+'’s times or yours, or it overlaps someone. Move it or rebuild.</p></div>':'')+
     '<div class="stack"><p class="eyebrow">This session</p><div class="pills fill" style="--k:3">'+[['','Booked'],['cx','Cancelled'],['late','Late cancel']].map(([k,l])=>'<button class="pill" data-st="'+k+'" aria-pressed="'+((x.st||'')===k)+'">'+l+'</button>').join('')+'</div><p class="small muted">Cancelled: not charged, doesn’t count towards their pack. Late cancel: charged, counts.</p></div>'+
     '<div class="field-row"><span class="lbl">Lock this time<span class="hint">A rebuild keeps locked sessions where they are.</span></span><label class="switch"><input type="checkbox" id="lk"'+(x.lock?' checked':'')+' aria-label="Lock this time"><span></span></label></div>'+
-    '<div class="stack"><p class="eyebrow">Move to another free time</p>'+(slots?'<div class="slots">'+slots+'</div>':'<p class="muted small">No other free times fit '+esc(c.name)+' this week.</p>')+'</div>'+
+    '<div class="stack"><p class="eyebrow">Change the time</p><div class="daypick" style="--c:'+c.color+'">'+DS.map((n,d)=>'<button data-ed="'+d+'" aria-pressed="'+(d===x.d)+'">'+n+'</button>').join('')+'</div><div class="row" style="flex-wrap:nowrap"><select class="input num" id="et" style="flex:1">'+timeOpts(x.s)+'</select><button class="btn btn-primary" id="esave">Save</button></div></div>'+
+    '<div class="stack"><p class="eyebrow">Or pick a free time that fits</p>'+(slots?'<div class="slots">'+slots+'</div>':'<p class="muted small">No other free times fit '+esc(c.name)+' this week.</p>')+'</div>'+
     '<div class="row" style="padding-top:8px"><button class="btn btn-danger" id="rm">Remove from this week</button></div>',
   r=>{
     $('#lk',r).addEventListener('change',e=>{x.lock=e.target.checked;save();renderWeek();});
     r.querySelectorAll('[data-st]').forEach(b=>b.addEventListener('click',()=>{const u=snapshot();if(b.dataset.st)x.st=b.dataset.st;else delete x.st;save();closeSheet();renderWeek();toast(x.st==='cx'?c.name+'’s session cancelled, not charged':x.st==='late'?'Late cancel, it counts':'Back to booked',u);}));
     r.querySelectorAll('[data-mv]').forEach(b=>b.addEventListener('click',()=>{const u=snapshot();const[d,s]=b.dataset.mv.split(',').map(Number);x.d=d;x.s=s;x.lock=true;save();closeSheet();renderWeek();toast('Moved to '+DS[d]+' '+fmt(s)+' and locked',u);}));
+    let ed=x.d;r.querySelectorAll('[data-ed]').forEach(b=>b.addEventListener('click',()=>{ed=+b.dataset.ed;r.querySelectorAll('[data-ed]').forEach(y=>y.setAttribute('aria-pressed',String(+y.dataset.ed===ed)));}));
+    $('#esave',r).addEventListener('click',()=>{const m=+$('#et',r).value;closeSheet();dropSession(x.id,ed,m);});
     $('#rm',r).addEventListener('click',()=>{const u=snapshot();wk.sched=wk.sched.filter(s=>s!==x);save();closeSheet();renderWeek();toast(c.name+'’s session removed',u);});
   });
 }
@@ -984,7 +1029,7 @@ function renderTimes(){
      '<div class="hours"><select class="input num" id="qf" aria-label="From">'+topts(qf,T.start*60,T.end*60-30)+'</select><span class="muted">to</span><select class="input num" id="qt" aria-label="To">'+topts(qt,T.start*60+30,T.end*60)+'</select></div>'+
      '<div class="quick-acts"><button class="btn btn-ghost btn-sm" id="qwk">Mon to Fri</button><button class="btn btn-primary btn-sm" id="qadd">Add these times</button></div></div>';
   h+='<div class="summary" id="sum"></div>';
-  h+='<p class="or">or drag on the grid</p>';
+  h+='<p class="or">or drag on the grid</p><p class="small muted" style="text-align:center;margin-top:-8px">Each box is one hour, from the time above it to the time below it.</p>';
   h+=gridHTML(wk,isT,c,col);
   h+='<div class="legend-mini"><span><i style="background:'+col+'"></i>'+(isT?'Open for clients':'Can train')+'</span>'+(isT?'':'<span><i style="background:repeating-linear-gradient(135deg,#ece5d9 0 4px,#f5f0e8 4px 8px)"></i>You’re not working</span>')+'</div>';
   if(isT)h+='<div class="row"><button class="btn btn-soft btn-sm" id="saveusual">Save this as my usual week</button></div>';
@@ -1034,7 +1079,7 @@ function gridHTML(wk,isT,c,col){
   let h='<div class="grid-wrap" style="--c:'+col+'"><div class="g-head"><span></span>';
   for(let d=0;d<7;d++)h+='<button data-day="'+d+'">'+DS[d]+'<small class="num">'+dm(dayDate(UI.wk,d)).slice(0,2)+'</small></button>';
   h+='</div><div class="g-body"><div class="g-hours">';
-  for(let hr=T.start;hr<T.end;hr++)h+='<button data-hr="'+hr+'" class="num">'+pad(hr)+'</button>';
+  for(let hr=T.start;hr<T.end;hr++)h+='<button data-hr="'+hr+'" class="num" aria-label="'+pad(hr)+':00 to '+pad(hr+1)+':00"><span>'+pad(hr)+':00</span>'+(hr===T.end-1?'<span class="end">'+pad(T.end)+':00</span>':'')+'</button>';
   h+='</div><div class="g-cells">';
   for(let hr=T.start;hr<T.end;hr++)for(let d=0;d<7;d++)h+='<div class="cell '+cellCls(M[d],TM[d],hr,isT)+'" data-d="'+d+'" data-h="'+hr+'"></div>';
   return h+'</div></div></div>';
@@ -1106,17 +1151,18 @@ async function readMessages(r){
     const c=S.clients.find(x=>x.name.toLowerCase()===lc)||S.clients.find(x=>x.name.toLowerCase().split(' ')[0]===lc.split(' ')[0]);
     const w=blankWeek();
     DK.forEach((k,d)=>{const rs=(p.days||{})[k];if(Array.isArray(rs))rs.forEach(r=>{const a=toMin(r[0]),b=toMin(r[1]);if(a!=null&&b!=null&&b>a)w[d]=setR(w[d],a,b,1);});});
-    return {name,c,w,sessions:Number.isFinite(+p.sessions)&&p.sessions!==null?+p.sessions:null};
+    const fx=[];(Array.isArray(p.fixed)?p.fixed:[]).forEach(f=>{const d=DK.indexOf(String(f.day||'').slice(0,3).toLowerCase());const mm=String(f.time||'').match(/(\d{1,2}):?(\d{2})?/);if(d>=0&&mm){const m=Math.round(((+mm[1])*60+(+(mm[2]||0)))/15)*15;fx.push({d,s:m});}});
+    return {name,c,w,fx,sessions:Number.isFinite(+p.sessions)&&p.sessions!==null?+p.sessions:null};
   }).filter(p=>p.name);
   pv.innerHTML='<p class="eyebrow">Check, then apply</p>'+parsed.map((p,i)=>{
-    let s='';for(let d=0;d<7;d++){const rr=ranges(p.w[d]);if(rr.length)s+=DS[d]+' '+rr.map(([a,b])=>fmt(a)+' to '+fmt(b)).join(', ')+'<br>';}
+    let s='';if(p.fx.length)s+='<b>Book exactly:</b> '+p.fx.map(f=>DS[f.d]+' '+fmt(f.s)).join(', ')+'<br>';for(let d=0;d<7;d++){if(p.fx.some(f=>f.d===d))continue;const rr=ranges(p.w[d]);if(rr.length)s+=DS[d]+' '+rr.map(([a,b])=>fmt(a)+' to '+fmt(b)).join(', ')+'<br>';}
     return '<div class="preview-p" style="--c:'+(p.c?p.c.color:'#9a9a9a')+'"><label><input type="checkbox" checked data-i="'+i+'"><span class="dot"></span>'+esc(p.c?p.c.name:p.name)+(p.c?'':' <span class="muted small" style="font-weight:600">new client</span>')+(p.sessions!=null?' <span class="muted small" style="font-weight:600">· '+p.sessions+' sessions</span>':'')+'</label><p class="small muted num">'+(s||'No times found')+'</p></div>';
   }).join('')+'<button class="btn btn-primary btn-big" id="apply">'+I.spark+'Add times and build the week</button>';
   $('#apply',pv).addEventListener('click',()=>{
     const u=snapshot(),wk=W();let n=0;
     pv.querySelectorAll('[data-i]').forEach(cb=>{if(!cb.checked)return;const p=parsed[+cb.dataset.i];let c=p.c;
       if(!c){c={id:'c'+uid(),name:p.name,color:nextColor(),sessions:p.sessions||2,len:60,spread:true};S.clients.push(c);}
-      wk.avail[c.id]=p.w;if(p.sessions!=null)wk.need[c.id]=p.sessions;n++;});
+      wk.avail[c.id]=p.w;if(p.sessions!=null)wk.need[c.id]=p.sessions;if(p.fx.length){wk.sched=wk.sched.filter(x=>x.c!==c.id||x.st);bookFixed(wk,c,p.fx);if(p.sessions==null)wk.need[c.id]=Math.max(p.fx.length,0);}n++;});
     wk.sched=solve(wk);wk.built=true;save();closeSheet();UI.fresh=true;UI.view='cal';go('week');
     const miss=S.clients.reduce((a,c)=>a+Math.max(0,need(wk,c)-live(wk).filter(x=>x.c===c.id).length),0);
     toast('Times in for '+n+(miss?', '+miss+' session'+(miss>1?'s':'')+' couldn’t fit':', everyone fits'),u);
